@@ -2,8 +2,8 @@
   "feature_id": "PD-0001",
   "title": "A001: Implement project scaffold and database layer",
   "slug": "a001-implement-project-scaffold-and-database-layer",
-  "status": "prepared",
-  "phase": null,
+  "status": "completed",
+  "phase": "awaiting_external_review",
   "summary": "",
   "description": "backend/ with pyproject.toml, app/main.py (FastAPI + CORS), app/config.py (pydantic-settings, all env vars), app/database.py (async engine, session, get_db() dependency).",
   "stories": [
@@ -345,6 +345,7 @@
       "description": "Create backend/ directory. Create pyproject.toml with: project name 'team-statusboard', requires-python='>=3.13', production deps (fastapi, uvicorn[standard], sqlalchemy[asyncpg], asyncpg, pydantic-settings, structlog, bcrypt, pyjwt, httpx, alembic), dev deps (pytest, pytest-asyncio, httpx, ruff, mypy). Add [tool.ruff] with target-version='py313', line-length=88. Add [tool.mypy] with strict=true. Add [tool.pytest.ini_options] with asyncio_mode='auto'. Create all directory scaffolding per README: app/__init__.py, app/models/__init__.py, app/schemas/__init__.py, app/api/__init__.py, app/api/routes/__init__.py, app/services/__init__.py, tests/__init__.py, tests/unit/__init__.py, tests/integration/__init__.py. Run `uv sync` to verify.",
       "level": 1,
       "estimate_minutes": 15,
+      "status": "done",
       "requirements": [
         "REQ-001",
         "REQ-009"
@@ -356,6 +357,7 @@
       "description": "Create app/config.py. Define a Settings class extending pydantic_settings.BaseSettings with: database_url (str, default 'postgresql+asyncpg://user:pass@localhost:5432/statusboard'), jwt_secret (str, no default — required), jwt_access_expire_minutes (int, default 30), jwt_refresh_expire_days (int, default 7), cors_origins (list[str], default ['http://localhost:3000'] — use a validator to split comma-separated string), ws_initial_hours (int, default 1), github_token (str | None, default None), log_level (str, default 'INFO'). Add model_config with env_file='.env'. Add a @lru_cache get_settings() function. Write tests in tests/unit/test_config.py: test defaults, test JWT_SECRET required, test env overrides, test CORS parsing.",
       "level": 1,
       "estimate_minutes": 15,
+      "status": "done",
       "requirements": [
         "REQ-002"
       ]
@@ -366,6 +368,7 @@
       "description": "Create app/database.py. Import create_async_engine, async_sessionmaker from sqlalchemy.ext.asyncio. Import DeclarativeBase for ORM base class. Create engine using settings.database_url. Create async_session_factory = async_sessionmaker(engine, expire_on_commit=False). Define a Base class (class Base(DeclarativeBase): pass) for future models. Define async def get_db() -> AsyncGenerator[AsyncSession, None] that yields a session and ensures close. Write tests in tests/unit/test_database.py: test get_db yields AsyncSession, test session is closed after generator exits.",
       "level": 1,
       "estimate_minutes": 15,
+      "status": "done",
       "requirements": [
         "REQ-003"
       ]
@@ -376,6 +379,7 @@
       "description": "Create app/main.py. Instantiate FastAPI(title='Team Statusboard', version='0.1.0'). Add CORSMiddleware with allow_origins from settings.cors_origins, allow_credentials=True, allow_methods=['*'], allow_headers=['*']. Create an api_router with prefix '/api/v1'. Add GET /health endpoint returning {'status': 'ok'}. Include the router in the app. Verify /docs and /redoc are enabled (FastAPI default). Write tests in tests/unit/test_main.py: test health returns 200, test CORS allows configured origin, test CORS blocks other origins, test /docs accessible, test /redoc accessible.",
       "level": 2,
       "estimate_minutes": 20,
+      "status": "done",
       "requirements": [
         "REQ-004",
         "REQ-005",
@@ -388,31 +392,20 @@
       "description": "Create tests/conftest.py. Define a test_settings fixture that creates Settings with jwt_secret='test-secret-key' and overrides database_url to use sqlite+aiosqlite for unit tests (no real DB needed for scaffold). Define an async client fixture that creates httpx.AsyncClient with ASGITransport(app=app) for testing FastAPI endpoints. Use app.dependency_overrides to inject test settings where needed. Ensure all existing tests pass with `uv run pytest -v`.",
       "level": 2,
       "estimate_minutes": 15,
+      "status": "done",
       "requirements": [
         "REQ-008"
       ]
     },
     {
       "id": "3.1",
-      "title": "Verify lint and type checks pass, fix any issues (REQ-007)",
+      "title": "Write Reference documentation for backend scaffold (config, database, app entry point)",
       "description": "Run `uv run ruff check app/ tests/` and fix any lint errors. Run `uv run mypy app/` and fix any type errors. Ensure both commands return zero exit codes. This task verifies all scaffold code meets quality standards before completion.",
       "level": 3,
       "estimate_minutes": 10,
+      "status": "done",
       "requirements": [
         "REQ-007"
-      ]
-    },
-    {
-      "id": "3.2",
-      "title": "Write Reference documentation for backend scaffold (config, database, app entry point)",
-      "description": "Create docs/reference/backend/scaffold.md. Document: (1) app/config.py — Settings class fields table with types, defaults, and descriptions matching the README env vars table. (2) app/database.py — engine creation, session factory, get_db() dependency usage example. (3) app/main.py — CORS configuration, health check endpoint (GET /api/v1/health, response schema). (4) How to run locally: uv sync, uv run fastapi dev app/main.py --port 8000. (5) How to run tests: uv run pytest -v.",
-      "level": 3,
-      "estimate_minutes": 15,
-      "requirements": [
-        "REQ-002",
-        "REQ-003",
-        "REQ-004",
-        "REQ-005"
       ]
     }
   ],
@@ -521,6 +514,14 @@
     "prepared": {
       "github_account": "berendt",
       "timestamp": "2026-02-24T19:14:21.621888"
+    },
+    "processing": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:21:07.150109"
+    },
+    "completed": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T21:22:30.572780"
     }
   },
   "execution_history": [
@@ -534,6 +535,50 @@
           "name": "prepare",
           "duration": 159.14953923225403,
           "type": "prepare",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "run_id": "f7ed17dc-c04d-4fd6-b230-9c8700181712",
+      "timestamp": "2026-02-24T19:39:52.597639",
+      "total_duration": 994.1995437145233,
+      "status": "completed",
+      "timings": [
+        {
+          "name": "Level 1 (3 tasks)",
+          "duration": 465.1653687953949,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 2 (2 tasks)",
+          "duration": 75.2519953250885,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 3 (1 tasks)",
+          "duration": 94.35828161239624,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0001] Code Review",
+          "duration": 214.25382375717163,
+          "type": "review",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0001] Improvements",
+          "duration": 84.41628193855286,
+          "type": "improve",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0001] Simplify",
+          "duration": 60.75379228591919,
+          "type": "simplify",
           "status": "done"
         }
       ]
