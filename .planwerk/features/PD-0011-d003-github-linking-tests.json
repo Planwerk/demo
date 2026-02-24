@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0011",
+  "title": "D003: GitHub Linking Tests",
+  "slug": "d003-github-linking-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Unit tests for parser (patterns, deduplication, edge cases), integration tests for status creation with refs.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.699094"
+    }
+  },
+  "origin": "plan"
+}

@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0023",
+  "title": "H002: StatusFeed & WebSocket",
+  "slug": "h002-statusfeed-websocket",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Paginated fetch, infinite scroll, useWebSocket hook (exponential backoff reconnect, last_received), live prepend of new statuses. StreakBanner, AchievementToast (auto-dismiss 5 s).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.704630"
+    }
+  },
+  "origin": "plan"
+}

@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0021",
+  "title": "G003: Auth Component Tests",
+  "slug": "g003-auth-component-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Jest + RTL tests for login/registration forms.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.703673"
+    }
+  },
+  "origin": "plan"
+}

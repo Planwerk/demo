@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0005",
+  "title": "B002: Auth Tests",
+  "slug": "b002-auth-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Unit tests for hash/JWT services, integration tests for register/login/refresh flows and 401 on protected routes.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.696329"
+    }
+  },
+  "origin": "plan"
+}

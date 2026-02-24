@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0015",
+  "title": "E004: Gamification Tests",
+  "slug": "e004-gamification-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Unit tests for XP/streak/achievement logic, integration tests for endpoints and achievement triggering on post.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.700893"
+    }
+  },
+  "origin": "plan"
+}

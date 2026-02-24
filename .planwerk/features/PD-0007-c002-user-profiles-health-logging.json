@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0007",
+  "title": "C002: User Profiles, Health & Logging",
+  "slug": "c002-user-profiles-health-logging",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "GET /users/me, PATCH /users/me, GET /users/{username}. Health check, /docs, /redoc. Structured JSON logging via structlog with request-ID middleware.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.697222"
+    }
+  },
+  "origin": "plan"
+}

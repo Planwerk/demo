@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0006",
+  "title": "C001: Status CRUD",
+  "slug": "c001-status-crud",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Service layer (create, list, get, update, delete) and REST routes: POST (201), GET list (paginated envelope), GET single, PATCH (author-only, 15-min window), DELETE (hard, 204). Query params: user_id, username, category, since, limit, offset.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.696786"
+    }
+  },
+  "origin": "plan"
+}

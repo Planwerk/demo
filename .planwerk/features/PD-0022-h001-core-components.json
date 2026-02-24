@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0022",
+  "title": "H001: Core Components",
+  "slug": "h001-core-components",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "StatusCard (avatar, message, category tag, timestamp, GitHubRefBadge list), StatusForm (textarea with counter, category dropdown), FilterBar, UserAvatar, ConnectionBadge.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.704151"
+    }
+  },
+  "origin": "plan"
+}

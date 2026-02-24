@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0010",
+  "title": "D002: Integration & Enrichment",
+  "slug": "d002-integration-enrichment",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Parse message on create/update, persist GitHubLink rows, include in StatusResponse. Optional metadata fetch from GitHub API when GITHUB_TOKEN is set (best-effort, non-blocking).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.698646"
+    }
+  },
+  "origin": "plan"
+}

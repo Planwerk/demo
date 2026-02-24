@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0026",
+  "title": "I001: Docker & Makefile",
+  "slug": "i001-docker-makefile",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "docker-compose.yml (db, backend, frontend), docker-compose.test.yml, .env.example. Multi-stage Dockerfiles (non-root). Makefile with all targets per README.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.706126"
+    }
+  },
+  "origin": "plan"
+}

@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0017",
+  "title": "F002: Broadcast & Notifications",
+  "slug": "f002-broadcast-notifications",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Broadcast new_status to all clients on POST. Send achievement_unlocked only to earning user. Server ping every 30 s, close after 2 missed pongs, ?last_received= for reconnect.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.701803"
+    }
+  },
+  "origin": "plan"
+}

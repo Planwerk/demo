@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Project Scaffold & Database Layer",
+  "slug": "a001-project-scaffold-database-layer",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "backend/ with pyproject.toml, app/main.py (FastAPI + CORS), app/config.py (pydantic-settings, all env vars), app/database.py (async engine, session, get_db() dependency).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.694308"
+    }
+  },
+  "origin": "plan"
+}

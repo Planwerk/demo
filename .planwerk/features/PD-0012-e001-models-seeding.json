@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0012",
+  "title": "E001: Models & Seeding",
+  "slug": "e001-models-seeding",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Achievement and UserAchievement models (N:M), migration. app/seed.py upserting all 12 achievements with icons/XP, --demo flag. Wired as make seed.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.699540"
+    }
+  },
+  "origin": "plan"
+}

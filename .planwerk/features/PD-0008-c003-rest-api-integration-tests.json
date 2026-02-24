@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0008",
+  "title": "C003: REST API Integration Tests",
+  "slug": "c003-rest-api-integration-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Full CRUD flows, pagination, filtering, edit-window enforcement, user profile operations.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.697663"
+    }
+  },
+  "origin": "plan"
+}

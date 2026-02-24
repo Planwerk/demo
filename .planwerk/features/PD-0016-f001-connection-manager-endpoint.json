@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0016",
+  "title": "F001: Connection Manager & Endpoint",
+  "slug": "f001-connection-manager-endpoint",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "ConnectionManager (connect with JWT, disconnect, broadcast, send_personal). ws /ws/statuses with initial state delivery (last WS_INITIAL_HOURS).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.701342"
+    }
+  },
+  "origin": "plan"
+}

@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0020",
+  "title": "G002: Auth State & Pages",
+  "slug": "g002-auth-state-pages",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "useAuth hook + AuthProvider Context (token in memory, silent refresh). Login and registration pages with client-side validation, server error display, redirect.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.703203"
+    }
+  },
+  "origin": "plan"
+}

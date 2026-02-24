@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0018",
+  "title": "F003: WebSocket Tests",
+  "slug": "f003-websocket-tests",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "Auth, initial state, broadcast receipt, achievement delivery, invalid token rejection.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.702257"
+    }
+  },
+  "origin": "plan"
+}

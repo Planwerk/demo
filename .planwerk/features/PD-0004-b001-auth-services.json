@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0004",
+  "title": "B001: Auth Services",
+  "slug": "b001-auth-services",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "app/services/auth.py — bcrypt hash/verify (cost 12), JWT create/decode (HS256, access 30 min, refresh 7 days).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.695896"
+    }
+  },
+  "origin": "plan"
+}

@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0028",
+  "title": "I003: CI Pipeline",
+  "slug": "i003-ci-pipeline",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": ".github/workflows/ci.yml — lint (ruff + eslint), test-backend (PostgreSQL service), test-frontend (jest), test-e2e (playwright + docker compose).",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.707111"
+    }
+  },
+  "origin": "plan"
+}

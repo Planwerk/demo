@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0013",
+  "title": "E002: XP, Streaks & Achievement Engine",
+  "slug": "e002-xp-streaks-achievement-engine",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "app/services/gamification.py — XP calculation (+10 base, +5/ref, +5×streak), streak tracking (consecutive days), achievement condition evaluator (all 12 rules). Hooked into create_status pipeline.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.699990"
+    }
+  },
+  "origin": "plan"
+}

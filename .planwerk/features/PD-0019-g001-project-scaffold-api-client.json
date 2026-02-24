@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0019",
+  "title": "G001: Project Scaffold & API Client",
+  "slug": "g001-project-scaffold-api-client",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "frontend/ via create-next-app (App Router, TypeScript, Tailwind). src/lib/types.ts mirroring backend schemas. src/lib/api.ts with Bearer injection, auto-refresh on 401, typed functions.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.702737"
+    }
+  },
+  "origin": "plan"
+}

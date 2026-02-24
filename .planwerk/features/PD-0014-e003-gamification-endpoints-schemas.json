@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0014",
+  "title": "E003: Gamification Endpoints & Schemas",
+  "slug": "e003-gamification-endpoints-schemas",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "GET /leaderboard, GET /users/{username}/stats, GET /users/{username}/achievements, GET /achievements. Response schemas in app/schemas/gamification.py.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.700438"
+    }
+  },
+  "origin": "plan"
+}

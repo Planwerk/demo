@@ -1,0 +1,24 @@
+{
+  "feature_id": "PD-0009",
+  "title": "D001: Parser & Model",
+  "slug": "d001-parser-model",
+  "status": "draft",
+  "phase": null,
+  "summary": "",
+  "description": "parse_github_references(text) extracting from owner/repo#number and full GitHub URLs. GitHubLink model with CASCADE delete, Alembic migration.",
+  "stories": [],
+  "requirements": [],
+  "tasks": [],
+  "test_specifications": [],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [],
+  "implementation_notes": "",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.698111"
+    }
+  },
+  "origin": "plan"
+}
