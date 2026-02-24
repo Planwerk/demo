@@ -1,0 +1,542 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "slug": "a001-implement-project-scaffold-and-database-layer",
+  "status": "prepared",
+  "phase": null,
+  "summary": "",
+  "description": "backend/ with pyproject.toml, app/main.py (FastAPI + CORS), app/config.py (pydantic-settings, all env vars), app/database.py (async engine, session, get_db() dependency).",
+  "stories": [
+    {
+      "title": "Developer can set up and run the backend project locally",
+      "role": "developer",
+      "want": "a working backend/ directory with pyproject.toml, dependency management via uv, and a runnable FastAPI application",
+      "so_that": "I can start building features on a properly configured project foundation",
+      "criteria": [
+        "Running `uv sync` in backend/ installs all dependencies without errors",
+        "Running `uv run fastapi dev app/main.py --port 8000` starts the server and responds on http://localhost:8000",
+        "The project uses Python 3.13 as specified in pyproject.toml",
+        "All production dependencies (fastapi, sqlalchemy[asyncpg], pydantic-settings, uvicorn, structlog, bcrypt, pyjwt, httpx) are declared",
+        "All dev dependencies (pytest, pytest-asyncio, httpx, ruff, mypy) are declared"
+      ]
+    },
+    {
+      "title": "Developer can configure the application via environment variables",
+      "role": "developer",
+      "want": "a pydantic-settings based config module that loads all environment variables with sensible defaults",
+      "so_that": "the application can be configured differently for development, testing, and production without code changes",
+      "criteria": [
+        "All env vars from README are present: DATABASE_URL, JWT_SECRET, JWT_ACCESS_EXPIRE_MINUTES, JWT_REFRESH_EXPIRE_DAYS, CORS_ORIGINS, WS_INITIAL_HOURS, GITHUB_TOKEN, LOG_LEVEL",
+        "DATABASE_URL defaults to postgresql+asyncpg://user:pass@localhost:5432/statusboard",
+        "JWT_SECRET has no default and is required",
+        "All other env vars have the defaults specified in the README",
+        "Settings are accessible via a cached get_settings() function",
+        "Invalid or missing required config causes a clear validation error at startup"
+      ]
+    },
+    {
+      "title": "Developer can connect to PostgreSQL via async SQLAlchemy",
+      "role": "developer",
+      "want": "an async SQLAlchemy engine and session factory configured from DATABASE_URL",
+      "so_that": "all future ORM models and queries use async I/O for non-blocking database access",
+      "criteria": [
+        "async engine is created using create_async_engine with the DATABASE_URL from config",
+        "async_sessionmaker is configured with expire_on_commit=False",
+        "get_db() is an async generator yielding AsyncSession for use as a FastAPI dependency",
+        "Sessions are properly closed after use (even on exception)",
+        "Engine pool settings are configurable or use reasonable defaults"
+      ]
+    },
+    {
+      "title": "FastAPI app starts with CORS configured for the frontend origin",
+      "role": "developer",
+      "want": "the FastAPI application to include CORS middleware allowing the frontend origin",
+      "so_that": "the Next.js frontend at localhost:3000 can make cross-origin requests to the backend",
+      "criteria": [
+        "CORS middleware allows origins from the CORS_ORIGINS config value",
+        "CORS_ORIGINS supports multiple comma-separated origins",
+        "Credentials, all headers, and all methods are allowed",
+        "A request from an allowed origin receives proper CORS headers",
+        "A request from a disallowed origin does not receive CORS headers"
+      ]
+    },
+    {
+      "title": "Developer can run tests against the backend scaffold",
+      "role": "developer",
+      "want": "a working test setup with pytest and pytest-asyncio that validates the scaffold components",
+      "so_that": "I can verify the scaffold is correct and have a foundation for TDD in subsequent features",
+      "criteria": [
+        "Running `uv run pytest` from backend/ discovers and runs all tests",
+        "tests/conftest.py exists with shared fixtures for settings override and async test client",
+        "Config loading is tested (defaults, overrides, required fields)",
+        "Database session dependency is tested (yields session, closes properly)",
+        "FastAPI app health/root endpoint returns expected response",
+        "All tests pass with `uv run pytest -v`"
+      ]
+    },
+    {
+      "title": "Backend project passes lint and type checks",
+      "role": "developer",
+      "want": "ruff and mypy configured and passing on all scaffold code",
+      "so_that": "code quality gates are enforced from the very first commit",
+      "criteria": [
+        "pyproject.toml contains ruff configuration (target Python 3.13, line-length 88)",
+        "pyproject.toml contains mypy configuration (strict mode)",
+        "`uv run ruff check app/ tests/` passes with zero errors",
+        "`uv run mypy app/` passes with zero errors"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "description": "The backend project SHALL have a pyproject.toml with all required production and development dependencies for the full application",
+      "priority": "SHALL",
+      "rationale": "A complete dependency declaration ensures reproducible builds and allows subsequent features to import needed packages immediately",
+      "scenarios": [
+        {
+          "name": "Dependencies install successfully",
+          "when": "developer runs `uv sync` in the backend/ directory",
+          "then": "all dependencies are installed without errors and a .venv is created",
+          "and_then": [
+            "fastapi, sqlalchemy, pydantic-settings, uvicorn, structlog, asyncpg are importable"
+          ]
+        },
+        {
+          "name": "Python version constraint enforced",
+          "when": "pyproject.toml is inspected",
+          "then": "requires-python specifies >=3.13",
+          "and_then": [
+            "uv sync fails if Python version is below 3.13"
+          ]
+        },
+        {
+          "name": "Dev dependencies are separate",
+          "when": "developer inspects pyproject.toml dependency groups",
+          "then": "pytest, pytest-asyncio, httpx, ruff, mypy are in dev dependency group",
+          "and_then": [
+            "production installs do not include test tooling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "description": "The config module SHALL load all environment variables defined in the README with correct types and defaults using pydantic-settings",
+      "priority": "SHALL",
+      "rationale": "Centralized, validated configuration prevents runtime errors from missing or malformed env vars",
+      "scenarios": [
+        {
+          "name": "Defaults are applied when env vars are not set",
+          "when": "the Settings class is instantiated without setting optional env vars",
+          "then": "each field uses its documented default value (DATABASE_URL, JWT_ACCESS_EXPIRE_MINUTES=30, JWT_REFRESH_EXPIRE_DAYS=7, CORS_ORIGINS=http://localhost:3000, WS_INITIAL_HOURS=1, LOG_LEVEL=INFO)",
+          "and_then": []
+        },
+        {
+          "name": "Required env vars cause validation error when missing",
+          "when": "JWT_SECRET is not set and Settings is instantiated",
+          "then": "a ValidationError is raised with a clear message indicating JWT_SECRET is required",
+          "and_then": []
+        },
+        {
+          "name": "Env var overrides are applied",
+          "when": "DATABASE_URL and LOG_LEVEL are set as environment variables",
+          "then": "the Settings instance reflects the overridden values with correct types",
+          "and_then": [
+            "integer fields (JWT_ACCESS_EXPIRE_MINUTES) are parsed from string env vars"
+          ]
+        },
+        {
+          "name": "CORS_ORIGINS parses comma-separated string into list",
+          "when": "CORS_ORIGINS is set to 'http://localhost:3000,http://localhost:3001'",
+          "then": "settings.cors_origins returns a list of two origin strings",
+          "and_then": []
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "description": "The database module SHALL provide an async SQLAlchemy engine and session factory configured from DATABASE_URL",
+      "priority": "SHALL",
+      "rationale": "Async database access is required for FastAPI's async request handling and non-blocking I/O",
+      "scenarios": [
+        {
+          "name": "Engine uses async driver",
+          "when": "the engine is created in database.py",
+          "then": "it uses create_async_engine with the DATABASE_URL from settings",
+          "and_then": [
+            "the URL scheme includes asyncpg"
+          ]
+        },
+        {
+          "name": "Session factory produces AsyncSession",
+          "when": "async_session_factory() is called",
+          "then": "it returns an AsyncSession configured with expire_on_commit=False",
+          "and_then": []
+        },
+        {
+          "name": "get_db dependency yields and closes session",
+          "when": "get_db() is used as a FastAPI dependency",
+          "then": "it yields an AsyncSession and closes it after the request completes",
+          "and_then": [
+            "the session is closed even if an exception occurs during the request"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "description": "The FastAPI application SHALL include CORS middleware configured from CORS_ORIGINS",
+      "priority": "SHALL",
+      "rationale": "The frontend runs on a different port/origin and requires CORS headers to communicate with the backend",
+      "scenarios": [
+        {
+          "name": "Allowed origin receives CORS headers",
+          "when": "a preflight OPTIONS request is sent from http://localhost:3000",
+          "then": "the response includes Access-Control-Allow-Origin: http://localhost:3000",
+          "and_then": [
+            "Access-Control-Allow-Credentials: true is present",
+            "Access-Control-Allow-Methods includes GET, POST, PUT, PATCH, DELETE"
+          ]
+        },
+        {
+          "name": "Disallowed origin does not receive CORS headers",
+          "when": "a request is sent from http://evil.example.com (not in CORS_ORIGINS)",
+          "then": "the response does not include Access-Control-Allow-Origin for that origin",
+          "and_then": []
+        },
+        {
+          "name": "Multiple CORS origins supported",
+          "when": "CORS_ORIGINS is configured with multiple origins",
+          "then": "requests from any of the listed origins receive proper CORS headers",
+          "and_then": []
+        }
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "description": "The FastAPI application SHALL expose a health check endpoint at GET /api/v1/health",
+      "priority": "SHALL",
+      "rationale": "Health checks are required for Docker, load balancers, and monitoring to verify the service is running",
+      "scenarios": [
+        {
+          "name": "Health check returns 200",
+          "when": "GET /api/v1/health is called",
+          "then": "the response status is 200 OK with a JSON body containing status: ok",
+          "and_then": []
+        },
+        {
+          "name": "Health check is unauthenticated",
+          "when": "GET /api/v1/health is called without any auth headers",
+          "then": "the response status is still 200 OK",
+          "and_then": [
+            "no authentication is required for this endpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "description": "The FastAPI application SHALL serve OpenAPI documentation at /docs and /redoc",
+      "priority": "SHALL",
+      "rationale": "Auto-generated API docs enable frontend developers and API consumers to explore the API without reading source code",
+      "scenarios": [
+        {
+          "name": "Swagger UI accessible",
+          "when": "GET /docs is requested",
+          "then": "the response status is 200 and contains the Swagger UI HTML page",
+          "and_then": []
+        },
+        {
+          "name": "ReDoc accessible",
+          "when": "GET /redoc is requested",
+          "then": "the response status is 200 and contains the ReDoc HTML page",
+          "and_then": []
+        }
+      ]
+    },
+    {
+      "id": "REQ-007",
+      "description": "The backend project SHALL have ruff and mypy configured and passing on all scaffold code",
+      "priority": "SHALL",
+      "rationale": "Lint and type-check gates from the start prevent technical debt accumulation",
+      "scenarios": [
+        {
+          "name": "Ruff check passes",
+          "when": "`uv run ruff check app/ tests/` is executed",
+          "then": "zero lint errors are reported",
+          "and_then": []
+        },
+        {
+          "name": "Mypy passes in strict mode",
+          "when": "`uv run mypy app/` is executed",
+          "then": "zero type errors are reported",
+          "and_then": []
+        },
+        {
+          "name": "Ruff config targets Python 3.13",
+          "when": "pyproject.toml [tool.ruff] section is inspected",
+          "then": "target-version is set to py313 and line-length is 88",
+          "and_then": []
+        }
+      ]
+    },
+    {
+      "id": "REQ-008",
+      "description": "The backend project SHALL have a test infrastructure with pytest, pytest-asyncio, and shared fixtures",
+      "priority": "SHALL",
+      "rationale": "A working test infrastructure is required before any TDD work can begin on subsequent features",
+      "scenarios": [
+        {
+          "name": "Tests are discoverable",
+          "when": "`uv run pytest --collect-only` is run from backend/",
+          "then": "all test files in tests/ are discovered",
+          "and_then": []
+        },
+        {
+          "name": "Async tests work",
+          "when": "a test function is marked with @pytest.mark.asyncio",
+          "then": "it runs correctly using the asyncio event loop",
+          "and_then": []
+        },
+        {
+          "name": "conftest provides test client fixture",
+          "when": "a test function requests the `client` fixture",
+          "then": "it receives an httpx.AsyncClient configured with the test FastAPI app",
+          "and_then": [
+            "settings can be overridden via the `test_settings` fixture"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-009",
+      "description": "The backend directory structure SHALL follow the layout defined in the README",
+      "priority": "SHALL",
+      "rationale": "Consistent project structure enables all future features to be placed in the correct location",
+      "scenarios": [
+        {
+          "name": "Core app modules exist",
+          "when": "the backend/app/ directory is inspected",
+          "then": "the following files exist: __init__.py, main.py, config.py, database.py",
+          "and_then": []
+        },
+        {
+          "name": "Package directories exist with __init__.py",
+          "when": "the backend/app/ directory is inspected",
+          "then": "the following directories exist with __init__.py files: models/, schemas/, api/, api/routes/, services/",
+          "and_then": [
+            "each __init__.py is empty (placeholder for future modules)"
+          ]
+        },
+        {
+          "name": "Test directories exist",
+          "when": "the backend/tests/ directory is inspected",
+          "then": "the following exist: conftest.py, unit/ directory, integration/ directory",
+          "and_then": []
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "Create backend/ directory structure with pyproject.toml and all dependencies (REQ-001, REQ-009)",
+      "description": "Create backend/ directory. Create pyproject.toml with: project name 'team-statusboard', requires-python='>=3.13', production deps (fastapi, uvicorn[standard], sqlalchemy[asyncpg], asyncpg, pydantic-settings, structlog, bcrypt, pyjwt, httpx, alembic), dev deps (pytest, pytest-asyncio, httpx, ruff, mypy). Add [tool.ruff] with target-version='py313', line-length=88. Add [tool.mypy] with strict=true. Add [tool.pytest.ini_options] with asyncio_mode='auto'. Create all directory scaffolding per README: app/__init__.py, app/models/__init__.py, app/schemas/__init__.py, app/api/__init__.py, app/api/routes/__init__.py, app/services/__init__.py, tests/__init__.py, tests/unit/__init__.py, tests/integration/__init__.py. Run `uv sync` to verify.",
+      "level": 1,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-001",
+        "REQ-009"
+      ]
+    },
+    {
+      "id": "1.2",
+      "title": "Implement app/config.py with Settings class and all environment variables (REQ-002)",
+      "description": "Create app/config.py. Define a Settings class extending pydantic_settings.BaseSettings with: database_url (str, default 'postgresql+asyncpg://user:pass@localhost:5432/statusboard'), jwt_secret (str, no default — required), jwt_access_expire_minutes (int, default 30), jwt_refresh_expire_days (int, default 7), cors_origins (list[str], default ['http://localhost:3000'] — use a validator to split comma-separated string), ws_initial_hours (int, default 1), github_token (str | None, default None), log_level (str, default 'INFO'). Add model_config with env_file='.env'. Add a @lru_cache get_settings() function. Write tests in tests/unit/test_config.py: test defaults, test JWT_SECRET required, test env overrides, test CORS parsing.",
+      "level": 1,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-002"
+      ]
+    },
+    {
+      "id": "1.3",
+      "title": "Implement app/database.py with async engine, session factory, and get_db() dependency (REQ-003)",
+      "description": "Create app/database.py. Import create_async_engine, async_sessionmaker from sqlalchemy.ext.asyncio. Import DeclarativeBase for ORM base class. Create engine using settings.database_url. Create async_session_factory = async_sessionmaker(engine, expire_on_commit=False). Define a Base class (class Base(DeclarativeBase): pass) for future models. Define async def get_db() -> AsyncGenerator[AsyncSession, None] that yields a session and ensures close. Write tests in tests/unit/test_database.py: test get_db yields AsyncSession, test session is closed after generator exits.",
+      "level": 1,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-003"
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "Implement app/main.py with FastAPI app, CORS middleware, and health check endpoint (REQ-004, REQ-005, REQ-006)",
+      "description": "Create app/main.py. Instantiate FastAPI(title='Team Statusboard', version='0.1.0'). Add CORSMiddleware with allow_origins from settings.cors_origins, allow_credentials=True, allow_methods=['*'], allow_headers=['*']. Create an api_router with prefix '/api/v1'. Add GET /health endpoint returning {'status': 'ok'}. Include the router in the app. Verify /docs and /redoc are enabled (FastAPI default). Write tests in tests/unit/test_main.py: test health returns 200, test CORS allows configured origin, test CORS blocks other origins, test /docs accessible, test /redoc accessible.",
+      "level": 2,
+      "estimate_minutes": 20,
+      "requirements": [
+        "REQ-004",
+        "REQ-005",
+        "REQ-006"
+      ]
+    },
+    {
+      "id": "2.2",
+      "title": "Create tests/conftest.py with shared test fixtures (REQ-008)",
+      "description": "Create tests/conftest.py. Define a test_settings fixture that creates Settings with jwt_secret='test-secret-key' and overrides database_url to use sqlite+aiosqlite for unit tests (no real DB needed for scaffold). Define an async client fixture that creates httpx.AsyncClient with ASGITransport(app=app) for testing FastAPI endpoints. Use app.dependency_overrides to inject test settings where needed. Ensure all existing tests pass with `uv run pytest -v`.",
+      "level": 2,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-008"
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Verify lint and type checks pass, fix any issues (REQ-007)",
+      "description": "Run `uv run ruff check app/ tests/` and fix any lint errors. Run `uv run mypy app/` and fix any type errors. Ensure both commands return zero exit codes. This task verifies all scaffold code meets quality standards before completion.",
+      "level": 3,
+      "estimate_minutes": 10,
+      "requirements": [
+        "REQ-007"
+      ]
+    },
+    {
+      "id": "3.2",
+      "title": "Write Reference documentation for backend scaffold (config, database, app entry point)",
+      "description": "Create docs/reference/backend/scaffold.md. Document: (1) app/config.py — Settings class fields table with types, defaults, and descriptions matching the README env vars table. (2) app/database.py — engine creation, session factory, get_db() dependency usage example. (3) app/main.py — CORS configuration, health check endpoint (GET /api/v1/health, response schema). (4) How to run locally: uv sync, uv run fastapi dev app/main.py --port 8000. (5) How to run tests: uv run pytest -v.",
+      "level": 3,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005"
+      ]
+    }
+  ],
+  "test_specifications": [
+    {
+      "test_file": "backend/tests/unit/test_config.py",
+      "test_function": "test_settings_default_values",
+      "story": "Developer can configure the application via environment variables",
+      "expected": "Settings instance created with JWT_SECRET set should have all other fields at their documented defaults",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "backend/tests/unit/test_config.py",
+      "test_function": "test_settings_jwt_secret_required",
+      "story": "Developer can configure the application via environment variables",
+      "expected": "Instantiating Settings without JWT_SECRET should raise ValidationError",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "backend/tests/unit/test_config.py",
+      "test_function": "test_settings_env_override",
+      "story": "Developer can configure the application via environment variables",
+      "expected": "Setting env vars should override default values with correct type coercion",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "backend/tests/unit/test_config.py",
+      "test_function": "test_cors_origins_parses_comma_separated",
+      "story": "Developer can configure the application via environment variables",
+      "expected": "CORS_ORIGINS='a,b' should produce a list ['a', 'b']",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "backend/tests/unit/test_database.py",
+      "test_function": "test_get_db_yields_async_session",
+      "story": "Developer can connect to PostgreSQL via async SQLAlchemy",
+      "expected": "get_db() should yield an AsyncSession instance",
+      "requirement_id": "REQ-003"
+    },
+    {
+      "test_file": "backend/tests/unit/test_database.py",
+      "test_function": "test_get_db_closes_session_after_use",
+      "story": "Developer can connect to PostgreSQL via async SQLAlchemy",
+      "expected": "After the get_db() generator exits, the session should be closed",
+      "requirement_id": "REQ-003"
+    },
+    {
+      "test_file": "backend/tests/unit/test_main.py",
+      "test_function": "test_health_endpoint_returns_200",
+      "story": "FastAPI app starts with CORS configured for the frontend origin",
+      "expected": "GET /api/v1/health returns 200 with {\"status\": \"ok\"}",
+      "requirement_id": "REQ-005"
+    },
+    {
+      "test_file": "backend/tests/unit/test_main.py",
+      "test_function": "test_cors_allows_configured_origin",
+      "story": "FastAPI app starts with CORS configured for the frontend origin",
+      "expected": "Preflight request from allowed origin should get correct CORS response headers",
+      "requirement_id": "REQ-004"
+    },
+    {
+      "test_file": "backend/tests/unit/test_main.py",
+      "test_function": "test_cors_blocks_disallowed_origin",
+      "story": "FastAPI app starts with CORS configured for the frontend origin",
+      "expected": "Request from non-configured origin should not get Access-Control-Allow-Origin header",
+      "requirement_id": "REQ-004"
+    },
+    {
+      "test_file": "backend/tests/unit/test_main.py",
+      "test_function": "test_docs_endpoint_accessible",
+      "story": "FastAPI app starts with CORS configured for the frontend origin",
+      "expected": "GET /docs returns 200 with HTML content",
+      "requirement_id": "REQ-006"
+    },
+    {
+      "test_file": "backend/tests/unit/test_main.py",
+      "test_function": "test_redoc_endpoint_accessible",
+      "story": "FastAPI app starts with CORS configured for the frontend origin",
+      "expected": "GET /redoc returns 200 with HTML content",
+      "requirement_id": "REQ-006"
+    }
+  ],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [
+    "Running `uv sync` in backend/ completes without errors and installs all declared dependencies",
+    "Running `uv run pytest -v` from backend/ discovers and passes all tests (config defaults, config required fields, config overrides, CORS parsing, get_db session lifecycle, health endpoint 200, CORS allowed origin, CORS blocked origin, /docs accessible, /redoc accessible)",
+    "Running `uv run ruff check app/ tests/` reports zero lint errors",
+    "Running `uv run mypy app/` reports zero type errors in strict mode",
+    "All env vars from the README table are present in Settings with correct types and defaults",
+    "CORS middleware is configured from settings.cors_origins (not hardcoded)",
+    "get_db() properly yields and closes AsyncSession (verified by test)",
+    "Directory structure matches README layout: app/{__init__,main,config,database}.py, app/{models,schemas,api,api/routes,services}/__init__.py, tests/{conftest,unit/,integration/}",
+    "docs/reference/backend/scaffold.md exists with complete reference documentation for config, database, and app modules"
+  ],
+  "implementation_notes": "This is the very first feature — greenfield. No existing code to follow.\n\nArchitectural decisions:\n- Use pydantic-settings BaseSettings for config to get automatic env var loading and .env file support\n- Use @lru_cache on get_settings() so the Settings instance is created once and reused\n- CORS_ORIGINS stored as list[str] with a @field_validator to handle comma-separated string from env\n- Database engine created at module level using settings; get_db() is an async generator dependency\n- DeclarativeBase defined in database.py so all future models import Base from one place\n- Health check at /api/v1/health (versioned API prefix from the start)\n- All package directories (models/, schemas/, api/, api/routes/, services/) created with empty __init__.py to enable imports in subsequent features\n- Test infrastructure uses httpx.AsyncClient with ASGITransport for async endpoint testing\n- pytest-asyncio configured with asyncio_mode='auto' so tests don't need explicit markers\n\nKey files:\n- backend/pyproject.toml — project metadata, dependencies, tool config\n- backend/app/config.py — Settings class, get_settings()\n- backend/app/database.py — engine, async_session_factory, Base, get_db()\n- backend/app/main.py — FastAPI app, CORS, health check\n- backend/tests/conftest.py — shared fixtures\n- backend/tests/unit/test_config.py — config tests\n- backend/tests/unit/test_database.py — database module tests\n- backend/tests/unit/test_main.py — app endpoint/CORS tests\n\nRisks:\n- asyncpg requires a running PostgreSQL for real connections; unit tests should mock or use SQLite with aiosqlite\n- pydantic-settings reads from process env, so tests must carefully control env vars (use monkeypatch or explicit construction)\n- mypy strict mode may require explicit type annotations on all functions including fixtures",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.694308"
+    },
+    "preparing": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:11:39.698955"
+    },
+    "prepared": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:14:21.621888"
+    }
+  },
+  "execution_history": [
+    {
+      "run_id": "2af98d85-5984-4aae-89eb-c36fb6b0e371",
+      "timestamp": "2026-02-24T19:14:21.621946",
+      "total_duration": 159.14953923225403,
+      "status": "completed",
+      "timings": [
+        {
+          "name": "prepare",
+          "duration": 159.14953923225403,
+          "type": "prepare",
+          "status": "done"
+        }
+      ]
+    }
+  ]
+}
