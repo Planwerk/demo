@@ -992,81 +992,143 @@ docker compose -f docker-compose.test.yml run --rm test-runner
 
 ## Development Workflow (LLM-Driven)
 
-This project is designed to be built incrementally using an LLM assistant. The recommended order of implementation:
+This project is designed to be built incrementally using an LLM assistant. The recommended order of implementation follows a strict **test-first approach**: testing infrastructure and linting are established in the very first phase and continuously extended throughout every subsequent phase.
+
+### Quality from Day One
+
+Every phase begins with tests (TDD: RED → GREEN → REFACTOR) and includes linting. The quality toolchain grows incrementally alongside the application code:
+
+| Phase | Quality milestone |
+| ----- | --- |
+| **Phase 1** | `pytest`, `ruff`, `pyproject.toml` test/lint config — first unit tests run. **GitHub Actions CI:** initial `.github/workflows/ci.yml` with `lint` + `test-backend` jobs |
+| **Phase 2** | Auth service unit tests, first integration tests with test DB — CI runs them automatically |
+| **Phase 3** | Full API integration test suite, `make test-backend` & `make lint` targets |
+| **Phase 4** | Parser unit tests, enrichment integration tests |
+| **Phase 5** | Gamification logic unit tests, endpoint integration tests |
+| **Phase 6** | WebSocket integration tests |
+| **Phase 7** | `jest`, `eslint`, `prettier`, `tsconfig.json` strict mode — first component tests run. **CI erweitert:** `test-frontend` Job hinzugefügt |
+| **Phase 8** | Component unit tests, MSW integration tests, `make test-frontend` target |
+| **Phase 9** | Playwright E2E tests. **CI finalisiert:** `test-e2e` Job hinzugefügt, alle Checks required für PR-Merge |
+
+> **Rule:** No feature code is merged without corresponding tests. Linters run before every commit (locally via `make lint`, enforced in CI). The GitHub Actions pipeline is created in Phase 1 and grows with every new test layer.
 
 ### Phase 1: Backend Foundation
 1. Set up the FastAPI project structure with `pyproject.toml` and dependencies
-2. Configure SQLAlchemy async engine and session management
-3. Define the `User` and `StatusUpdate` SQLAlchemy models with relationships
-4. Create Alembic migration for the initial schema
-5. Implement Pydantic request/response schemas with validation
-6. Write unit tests for schemas and model relationships
+2. **Configure test & lint tooling from the start:**
+   - Add `pytest`, `pytest-asyncio`, `pytest-cov`, and `httpx` as dev dependencies
+   - Add `ruff` as dev dependency and configure `[tool.ruff]` in `pyproject.toml` (linting + formatting rules)
+   - Create `tests/conftest.py` with initial shared fixtures
+   - Verify the toolchain: `uv run pytest` passes (zero tests collected), `uv run ruff check .` passes with no errors
+3. **Create initial GitHub Actions CI pipeline** (`.github/workflows/ci.yml`):
+   - Trigger: push to `main` and pull requests
+   - `lint` job: checkout → install `uv` → `uv run ruff check .`
+   - `test-backend` job: checkout → install `uv` → start PostgreSQL service container → `uv run pytest --tb=short -q`
+   - Verify: push the branch and confirm both jobs pass (green)
+4. Configure SQLAlchemy async engine and session management
+5. Define the `User` and `StatusUpdate` SQLAlchemy models with relationships
+6. Create Alembic migration for the initial schema
+7. Implement Pydantic request/response schemas with validation
+8. Write unit tests for schemas and model relationships (first RED → GREEN cycle)
 
 ### Phase 2: Authentication
-1. Implement password hashing service (bcrypt)
-2. Implement JWT creation and validation service
-3. Create registration endpoint with email/username uniqueness checks
-4. Create login endpoint returning access + refresh tokens
-5. Implement `get_current_user` dependency for protected routes
-6. Write unit tests for auth services and integration tests for auth endpoints
+1. Write unit tests for password hashing and JWT services (RED)
+2. Implement password hashing service (bcrypt) — tests pass (GREEN)
+3. Implement JWT creation and validation service — tests pass (GREEN)
+4. Write integration tests for registration and login endpoints (RED)
+5. Create registration endpoint with email/username uniqueness checks — tests pass (GREEN)
+6. Create login endpoint returning access + refresh tokens — tests pass (GREEN)
+7. Implement `get_current_user` dependency for protected routes
+8. Run `ruff check` and fix any lint issues before committing
 
 ### Phase 3: REST API
-1. Implement status update CRUD service functions
-2. Create REST API routes with authentication
-3. Add pagination and filtering support
-4. Add user profile endpoints
-5. Write integration tests for all endpoints
-6. Add health check endpoint
+1. Write integration tests for status CRUD endpoints (RED)
+2. Implement status update CRUD service functions — tests pass (GREEN)
+3. Create REST API routes with authentication
+4. Add pagination and filtering support
+5. Write integration tests for user profile endpoints (RED)
+6. Add user profile endpoints — tests pass (GREEN)
+7. Add health check endpoint with test
+8. **Create `Makefile` with `test-backend` and `lint` targets** — establish the `make test-backend` and `make lint` workflow for all subsequent phases
 
 ### Phase 4: GitHub Linking
-1. Implement GitHub reference parser (regex for `owner/repo#number`)
-2. Create `GitHubLink` model and migration
-3. Integrate parsing into status creation flow
-4. Add optional GitHub API metadata fetching (title, state, type)
-5. Write unit tests for parser and integration tests for the full flow
+1. Write unit tests for GitHub reference parser (RED)
+2. Implement GitHub reference parser (regex for `owner/repo#number`) — tests pass (GREEN)
+3. Create `GitHubLink` model and migration
+4. Write integration tests for parsing within status creation flow (RED)
+5. Integrate parsing into status creation flow — tests pass (GREEN)
+6. Add optional GitHub API metadata fetching (title, state, type) with tests
+7. Run `make lint` and `make test-backend` — all green before committing
 
 ### Phase 5: Gamification
-1. Create `Achievement` and `UserAchievement` models and migration
-2. Seed the achievements table with all defined achievements
-3. Implement XP calculation service
-4. Implement streak tracking logic
-5. Implement achievement condition evaluator
-6. Create leaderboard and stats endpoints
-7. Write unit tests for gamification logic and integration tests for endpoints
+1. Write unit tests for XP calculation, streak tracking, and achievement conditions (RED)
+2. Create `Achievement` and `UserAchievement` models and migration
+3. Seed the achievements table with all defined achievements
+4. Implement XP calculation service — tests pass (GREEN)
+5. Implement streak tracking logic — tests pass (GREEN)
+6. Implement achievement condition evaluator — tests pass (GREEN)
+7. Write integration tests for leaderboard and stats endpoints (RED)
+8. Create leaderboard and stats endpoints — tests pass (GREEN)
+9. Run `make lint` and `make test-backend` — all green before committing
 
 ### Phase 6: Real-Time (WebSocket)
-1. Implement WebSocket connection manager with JWT authentication
-2. Create WebSocket endpoint with initial state delivery
-3. Hook up POST endpoint to broadcast new updates to all clients
-4. Send achievement notifications to individual users on unlock
-5. Write WebSocket integration tests
-6. Handle reconnection and error scenarios
+1. Write integration tests for WebSocket connection, auth, and broadcast (RED)
+2. Implement WebSocket connection manager with JWT authentication — tests pass (GREEN)
+3. Create WebSocket endpoint with initial state delivery — tests pass (GREEN)
+4. Hook up POST endpoint to broadcast new updates to all clients
+5. Send achievement notifications to individual users on unlock
+6. Handle reconnection and error scenarios with tests
+7. Run `make lint` and `make test-backend` — all green before committing
 
 ### Phase 7: Frontend Foundation
 1. Set up Next.js project with TypeScript and Tailwind CSS
-2. Define TypeScript interfaces matching backend schemas
-3. Create API client module with JWT auth header injection
-4. Implement `useAuth` hook with token storage and refresh
-5. Build login and registration pages
-6. Write unit tests for auth components
+2. **Configure test & lint tooling from the start:**
+   - Add `jest`, `@testing-library/react`, `@testing-library/jest-dom`, and `msw` as dev dependencies
+   - Configure `jest.config.ts` with Next.js SWC transform
+   - Add `eslint` (with `eslint-config-next`) and `prettier` — configure rules in `.eslintrc.json` and `.prettierrc`
+   - Enable `strict: true` in `tsconfig.json`
+   - Verify the toolchain: `npm test` passes (zero tests collected), `npm run lint` passes with no errors
+3. **Extend GitHub Actions CI pipeline** — add two new jobs to `.github/workflows/ci.yml`:
+   - `lint-frontend` job: checkout → `npm ci` → `npm run lint`
+   - `test-frontend` job: checkout → `npm ci` → `npm test -- --ci`
+   - Verify: push and confirm all jobs (backend + frontend) pass
+4. Define TypeScript interfaces matching backend schemas
+5. Create API client module with JWT auth header injection
+6. Write unit tests for `useAuth` hook (RED)
+7. Implement `useAuth` hook with token storage and refresh — tests pass (GREEN)
+8. Write unit tests for login and registration components (RED)
+9. Build login and registration pages — tests pass (GREEN)
 
 ### Phase 8: Frontend Features
-1. Implement `StatusCard` component (with `GitHubRefBadge`) and unit tests
-2. Implement `StatusForm` component with validation and unit tests
-3. Build `StatusFeed` with data fetching and list rendering
-4. Implement `useWebSocket` hook with auto-reconnection and JWT
-5. Add `FilterBar`, `UserAvatar`, and `ConnectionBadge`
-6. Build user profile page with stats and achievement display
-7. Build leaderboard page
-8. Add `StreakBanner` and `AchievementToast` components
-9. Write frontend integration tests
+1. Write unit tests for `StatusCard` and `GitHubRefBadge` (RED), then implement (GREEN)
+2. Write unit tests for `StatusForm` with validation (RED), then implement (GREEN)
+3. Write integration test for `StatusFeed` with MSW (RED)
+4. Build `StatusFeed` with data fetching and list rendering — tests pass (GREEN)
+5. Write unit tests for `useWebSocket` hook (RED), then implement with auto-reconnection and JWT (GREEN)
+6. Add `FilterBar`, `UserAvatar`, and `ConnectionBadge` with unit tests
+7. Build user profile page with stats and achievement display
+8. Build leaderboard page with unit tests
+9. Add `StreakBanner` and `AchievementToast` components with unit tests
+10. Write remaining frontend integration tests (auth flow, status feed)
+11. **Create `Makefile` target `test-frontend`** — establish the `make test-frontend` workflow
+12. Run `npm run lint` and `npm test` — all green before committing
 
-### Phase 9: E2E & Polish
-1. Set up Playwright configuration
+### Phase 9: E2E, CI & Polish
+1. Set up Playwright configuration (`playwright.config.ts`, test fixtures)
 2. Write E2E test scenarios for auth, posting, real-time, GitHub links, and gamification
 3. Add Docker Compose setup for the full stack
-4. Create test Docker Compose configuration
-5. Write `Makefile` with common commands
+4. Create test Docker Compose configuration (`docker-compose.test.yml`)
+5. Finalize `Makefile` with all targets (`test`, `test-e2e`, `lint`, `lint-fix`, `build`, `clean`)
+6. **Finalize GitHub Actions CI pipeline** — add E2E job to the existing `.github/workflows/ci.yml`:
+   - `test-e2e` job: checkout → start full stack via `docker compose -f docker-compose.test.yml up -d` → `npx playwright test` → upload test report as artifact
+   - Configure branch protection: all jobs (`lint`, `test-backend`, `lint-frontend`, `test-frontend`, `test-e2e`) must pass before a PR can be merged
+   - Final state of the pipeline:
+     ```
+     push/PR → lint (ruff) ──────────┐
+             → lint-frontend (eslint) ┤
+             → test-backend (pytest)  ├─→ all must pass
+             → test-frontend (jest)   ┤
+             → test-e2e (playwright) ─┘
+     ```
 
 ## Environment Variables
 
