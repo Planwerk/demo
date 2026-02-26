@@ -1,0 +1,105 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-26",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Backend scaffold is well-structured with clean FastAPI app, pydantic-settings config, async SQLAlchemy database layer, and CI pipeline. All 17 tests pass, ruff is clean. Two issues require attention: (1) mypy is missing from dev dependencies and the module-level Settings() instantiation fails mypy --strict due to missing JWT_SECRET argument, (2) docs/reference/backend/scaffold.md incorrectly places .github/ under backend/ directory tree.",
+  "verification": {
+    "pytest": "17 passed in 0.32s",
+    "ruff": "All checks passed",
+    "mypy_strict": "1 error: app/config.py:23 Missing named argument JWT_SECRET for Settings [call-arg]"
+  },
+  "tests_checklist": [
+    {"item": "All tests pass (V1: 17/17 passed)", "checked": true},
+    {"item": "Config defaults tested (7 settings fields)", "checked": true},
+    {"item": "Config validation tested (missing JWT_SECRET raises ValidationError)", "checked": true},
+    {"item": "cors_origins_list property tested with comma-separated input", "checked": true},
+    {"item": "Database module structure tested (Base, engine, sessionmaker, get_db)", "checked": true},
+    {"item": "Health endpoint tested (200 OK, response body, no auth)", "checked": true},
+    {"item": "CORS headers tested (allowed origin, credentials)", "checked": true},
+    {"item": "Edge cases: empty CORS_ORIGINS, whitespace in origins, boundary numeric values", "checked": false},
+    {"item": "Error cases: malformed DATABASE_URL, disallowed CORS origin", "checked": false}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do ONE thing (SRP)", "checked": true},
+    {"item": "Q2: Functions small (all ≤4 lines)", "checked": true},
+    {"item": "Q3: No code duplication", "checked": true},
+    {"item": "Q4: Clear naming throughout", "checked": true},
+    {"item": "Q5: Max 2 nesting levels", "checked": true},
+    {"item": "Q6: No magic numbers/strings (config defaults are named)", "checked": true},
+    {"item": "Q7: No dead code or unused imports", "checked": true},
+    {"item": "T1: All functions have type annotations (params + return)", "checked": true},
+    {"item": "T2: No bare Any types", "checked": true},
+    {"item": "T3: No type: ignore without explanation", "checked": true},
+    {"item": "T5: Optional types handled (GITHUB_TOKEN: str | None = None)", "checked": true},
+    {"item": "P5: File location matches project structure conventions", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S1: No user input endpoints beyond health check (N/A for scaffold)", "checked": true},
+    {"item": "S2: No SQL injection risk (ORM used, no raw queries)", "checked": true},
+    {"item": "S3: No hardcoded production secrets (DATABASE_URL default is dev-only placeholder)", "checked": true},
+    {"item": "S4: JWT_SECRET required with no default (correct)", "checked": true},
+    {"item": "S5: Sensitive data not exposed in logs (echo=False on engine)", "checked": true},
+    {"item": "S6: No path traversal risk (N/A)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Clean separation: config.py, database.py, main.py", "checked": true},
+    {"item": "Directory structure matches README spec (models/, schemas/, api/routes/, services/)", "checked": true},
+    {"item": "Async-first design (create_async_engine, async_sessionmaker, AsyncSession)", "checked": true},
+    {"item": "get_db() uses async context manager for proper session cleanup", "checked": true},
+    {"item": "Solution is as simple as possible for scaffold phase", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code across modules", "checked": true},
+    {"item": "No premature abstractions or unnecessary utilities", "checked": true},
+    {"item": "No over-engineering beyond scaffold requirements", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "JWT_SECRET missing at startup raises ValidationError immediately", "checked": true},
+    {"item": "Settings validated at import time via module-level instantiation", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "CORS origins read from config, not hardcoded in middleware", "checked": true},
+    {"item": "Database session properly closed via async context manager (async with)", "checked": true},
+    {"item": "All external inputs (env vars) validated via pydantic-settings", "checked": true}
+  ],
+  "security_findings": [
+    {
+      "severity": "LOW",
+      "check_id": "S3",
+      "description": "DATABASE_URL default contains placeholder credentials 'user:pass'. While this is a development-only default and acceptable for local dev, ensure .env.example documents this and production deployments always set DATABASE_URL explicitly.",
+      "location": "backend/app/config.py:9",
+      "fix": "No change needed for scaffold. Document in .env.example that DATABASE_URL must be set in production."
+    }
+  ],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "V2-001",
+      "severity": "blocking",
+      "check_id": "V2",
+      "description": "mypy is not included in dev dependencies in pyproject.toml. When run externally via `uv run --with mypy mypy app/ --strict`, it reports 1 error: `app/config.py:23: error: Missing named argument \"JWT_SECRET\" for \"Settings\" [call-arg]`. The module-level `settings = Settings()` relies on pydantic-settings reading JWT_SECRET from the environment, which mypy cannot verify without the pydantic mypy plugin.",
+      "location": "backend/pyproject.toml (dev deps), backend/app/config.py:23",
+      "fix": "Add `mypy` to dev dependencies. Configure pydantic mypy plugin in pyproject.toml: `[tool.mypy] plugins = [\"pydantic.mypy\"]`. Alternatively, if the plugin is not desired, add `settings = Settings()  # type: ignore[call-arg]  # JWT_SECRET provided via env` with a justifying comment."
+    },
+    {
+      "id": "DA3-001",
+      "severity": "minor",
+      "check_id": "DA3",
+      "description": "docs/reference/backend/scaffold.md lines 93-97 show `.github/workflows/ci.yml` indented under the `backend/` directory tree, but the CI workflow is at the repo root `.github/workflows/ci.yml`, not under `backend/`.",
+      "location": "docs/reference/backend/scaffold.md:93-97",
+      "fix": "Move the `.github/` entry out of the `backend/` tree section, or add a separate section for repo-root files."
+    }
+  ],
+  "suggested_improvements": [
+    "TE2: Add edge case tests for empty CORS_ORIGINS string and whitespace trimming (e.g., 'origin1, origin2' with spaces around comma)",
+    "TE2: Add boundary value tests for numeric config fields (JWT_ACCESS_EXPIRE_MINUTES=0, WS_INITIAL_HOURS=0)",
+    "TE3: Add test for CORS preflight with a disallowed origin to verify it is rejected",
+    "Consider adding a `[tool.mypy]` section to pyproject.toml with strict=true and pydantic plugin for future phases"
+  ],
+  "next_steps": [
+    "Add mypy to dev dependencies and configure pydantic mypy plugin (fixes V2-001)",
+    "Fix scaffold.md directory tree to correctly place .github/ at repo root (fixes DA3-001)",
+    "Re-run `uv run mypy app/ --strict` to verify zero errors after fix"
+  ]
+}
