@@ -1,0 +1,172 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-25",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Scaffold is well-implemented: clean config/database/app modules, all 11 tests pass, mypy --strict clean, ruff clean, CI workflow correct, docs accurate. Two major issues prevent APPROVED: (1) all 11 test names violate the test_should_X_when_Y convention (TE5), and (2) .env is missing from .gitignore, risking credential leakage (security). Minor issues include overly permissive CORS wildcards and missing edge-case tests.",
+  "automated_verification": {
+    "V1_pytest": {"status": "PASS", "detail": "11 passed in 0.33s, 0 failures"},
+    "V2_mypy_strict": {"status": "PASS", "detail": "Success: no issues found in 9 source files"},
+    "V3_ruff_check": {"status": "PASS", "detail": "All checks passed"}
+  },
+  "tests_checklist": [
+    {"item": "TE1: Happy path tested with realistic data", "checked": true, "detail": "Config, health, and database modules all have happy-path tests with realistic values"},
+    {"item": "TE2: Edge cases tested (empty, null, boundary)", "checked": false, "detail": "Missing: cors_origins_list with single origin, empty string, whitespace; invalid integer env vars"},
+    {"item": "TE3: Error cases tested (invalid input, failures)", "checked": false, "detail": "Missing: disallowed CORS origin test (REQ-005 scenario), get_db() session cleanup on exception (REQ-004)"},
+    {"item": "TE4: Tests independent (no shared mutable state)", "checked": false, "detail": "conftest.py:5-7 uses os.environ.setdefault at module level, leaking global state across test modules"},
+    {"item": "TE5: Test names follow test_should_X_when_Y", "checked": false, "detail": "0/11 tests follow the convention. All use descriptive but non-standard names"},
+    {"item": "TE6: Mocking appropriate (not over-mocked)", "checked": true, "detail": "monkeypatch for env vars, httpx.ASGITransport for app testing — appropriate level"},
+    {"item": "TE7: Assertions specific (exact values, not just 'no error')", "checked": true, "detail": "All assertions check exact values. Minor: test_health_no_auth_required only checks status code"}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do ONE thing (SRP)", "checked": true},
+    {"item": "Q2: Functions small (<=20 lines)", "checked": true, "detail": "All functions 1-5 lines"},
+    {"item": "Q3: No code duplication", "checked": true, "detail": "Minor: test_health_no_auth_required nearly identical to test_health_returns_200_ok"},
+    {"item": "Q4: Clear naming (intention-revealing)", "checked": true},
+    {"item": "Q5: Max 3 nesting levels", "checked": true},
+    {"item": "Q6: No magic numbers/strings", "checked": true},
+    {"item": "Q7: No dead code", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S1: Input validated at API boundaries", "checked": true, "detail": "Health check only, no user input accepted"},
+    {"item": "S2: No SQL injection (ORM only)", "checked": true},
+    {"item": "S3: No hardcoded secrets", "checked": false, "detail": "config.py:11 DATABASE_URL default embeds user:pass credentials; .env missing from .gitignore"},
+    {"item": "S4: Authorization on protected endpoints", "checked": true, "detail": "N/A — only health check exists, correctly unauthenticated"},
+    {"item": "S5: Sensitive data not exposed in logs/errors", "checked": true, "detail": "echo=False on engine, no debug=True, LOG_LEVEL defaults to INFO"},
+    {"item": "S6: No path traversal", "checked": true, "detail": "No file operations"}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible", "checked": true},
+    {"item": "Package structure matches spec", "checked": true, "detail": "app/{models,schemas,api/routes,services}/ all present with __init__.py"},
+    {"item": "Follows existing patterns", "checked": true, "detail": "First feature — establishes clean patterns"},
+    {"item": "File locations match conventions", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code", "checked": true},
+    {"item": "No unused dependencies", "checked": false, "detail": "pyproject.toml includes python-jose, passlib, bcrypt, structlog as runtime deps — not used in scaffold phase. httpx listed in both runtime and dev deps."},
+    {"item": "No unnecessary abstractions", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Errors detected early", "checked": true, "detail": "JWT_SECRET has no default — ValidationError at startup if missing"},
+    {"item": "filterwarnings=['error'] catches warnings as errors", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "All external inputs validated", "checked": true, "detail": "Settings validated by pydantic at import time"},
+    {"item": "Database sessions properly cleaned up", "checked": true, "detail": "get_db() uses async with context manager ensuring cleanup"}
+  ],
+  "type_safety_checklist": [
+    {"item": "T1: All functions have type annotations", "checked": true},
+    {"item": "T2: No bare Any", "checked": true},
+    {"item": "T3: No type:ignore without explanation", "checked": false, "detail": "config.py:26 has # type: ignore[call-arg] — justified pattern for pydantic-settings but comment should explain WHY"},
+    {"item": "T4: Generic types properly constrained", "checked": true},
+    {"item": "T5: Optional types handled", "checked": true, "detail": "GITHUB_TOKEN: str | None = None — correct modern syntax"}
+  ],
+  "feature_completeness_checklist": [
+    {"item": "FC1: All tasks implemented", "checked": true, "detail": "All 10 tasks (1.1-5.1) verified complete"},
+    {"item": "FC2: No stubs/TODOs remain", "checked": true},
+    {"item": "FC3: All functions fully working", "checked": true},
+    {"item": "FC4: End-to-end behavior works", "checked": true, "detail": "Health check returns 200 with {\"status\":\"ok\"}, CORS headers present for allowed origin"}
+  ],
+  "docs_alignment_checklist": [
+    {"item": "DA1: docs/ entries match implementation", "checked": true, "detail": "docs/reference/backend/scaffold.md accurately reflects all modules, exports, env vars, CI config"},
+    {"item": "DA2: README capabilities match code", "checked": true, "detail": "README env vars table, health endpoint, and project structure match implementation"},
+    {"item": "DA3: PLAN.md S01 description matches code", "checked": true}
+  ],
+  "security_findings": [
+    {
+      "id": "SEC-1",
+      "severity": "MEDIUM",
+      "check_id": "S3",
+      "description": ".env file not in .gitignore — developers creating .env with JWT_SECRET, DATABASE_URL credentials, or GITHUB_TOKEN risk committing secrets to version control",
+      "location": "backend/.gitignore",
+      "fix": "Add `.env` and `.env.*` (except `.env.example`) to backend/.gitignore"
+    },
+    {
+      "id": "SEC-2",
+      "severity": "LOW",
+      "check_id": "S3",
+      "description": "DATABASE_URL default embeds plaintext credentials user:pass in source code",
+      "location": "backend/app/config.py:11",
+      "fix": "Acceptable for localhost dev default. Consider adding a code comment noting these are dev-only defaults"
+    },
+    {
+      "id": "SEC-3",
+      "severity": "LOW",
+      "check_id": "S1",
+      "description": "CORS allow_methods=['*'] and allow_headers=['*'] are overly permissive. However, the task spec (Task 2.3) explicitly specifies these values, so this matches requirements",
+      "location": "backend/app/main.py:15-16",
+      "fix": "No action needed for this phase — the spec explicitly requires wildcards. Consider restricting in future phases when actual methods/headers are known"
+    }
+  ],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "ISSUE-1",
+      "severity": "major",
+      "check_id": "TE5",
+      "description": "All 11 test functions use descriptive but non-standard names. None follow the project test_should_X_when_Y convention",
+      "location": "backend/tests/unit/test_config.py, test_database.py, test_health.py",
+      "fix": "Rename all tests. Examples: test_settings_loads_with_valid_env → test_should_load_settings_when_valid_env_vars_provided, test_base_is_declarative_base → test_should_be_declarative_base_subclass_when_base_imported, test_health_returns_200_ok → test_should_return_200_ok_when_health_endpoint_called"
+    },
+    {
+      "id": "ISSUE-2",
+      "severity": "major",
+      "check_id": "SEC-1",
+      "description": ".env not in backend/.gitignore — config.py reads from .env file (env_file='.env'), creating risk of credential commit",
+      "location": "backend/.gitignore",
+      "fix": "Add .env and .env.* to backend/.gitignore. Only .env.example should be tracked"
+    },
+    {
+      "id": "ISSUE-3",
+      "severity": "minor",
+      "check_id": "TE2",
+      "description": "cors_origins_list edge cases untested: single origin without comma, empty string (returns ['']), whitespace handling",
+      "location": "backend/tests/unit/test_config.py",
+      "fix": "Add tests: test_should_return_single_origin_when_no_comma, test_should_strip_whitespace_when_origins_have_spaces"
+    },
+    {
+      "id": "ISSUE-4",
+      "severity": "minor",
+      "check_id": "TE3",
+      "description": "No test verifying disallowed CORS origin is rejected (REQ-005 scenario 'Disallowed origin blocked')",
+      "location": "backend/tests/unit/test_health.py",
+      "fix": "Add test_should_not_include_cors_header_when_disallowed_origin_requests with origin http://evil.com"
+    },
+    {
+      "id": "ISSUE-5",
+      "severity": "minor",
+      "check_id": "T3",
+      "description": "type: ignore[call-arg] lacks explanatory comment for why it's needed",
+      "location": "backend/app/config.py:26",
+      "fix": "Change to: settings = Settings()  # type: ignore[call-arg]  # JWT_SECRET provided via env vars at runtime"
+    },
+    {
+      "id": "ISSUE-6",
+      "severity": "minor",
+      "check_id": "TE4",
+      "description": "conftest.py sets env vars via os.environ.setdefault at module level, which leaks global state. Works correctly because conftest loads first, but is fragile",
+      "location": "backend/tests/conftest.py:5-7",
+      "fix": "Convert to a session-scoped autouse fixture using monkeypatch or unittest.mock.patch.dict for proper scoping"
+    },
+    {
+      "id": "ISSUE-7",
+      "severity": "minor",
+      "check_id": "Q3",
+      "description": "test_health_no_auth_required is nearly identical to test_health_returns_200_ok — both GET /api/v1/health and assert 200. No auth mechanism exists yet, so the distinction is meaningless",
+      "location": "backend/tests/unit/test_health.py:22-25",
+      "fix": "Acceptable as documentation of intent. No change required — will gain value once auth middleware is added"
+    }
+  ],
+  "suggested_improvements": [
+    "Add .env and .env.* to backend/.gitignore (ISSUE-2)",
+    "Rename all 11 tests to follow test_should_X_when_Y convention (ISSUE-1)",
+    "Add explanatory comment to type: ignore in config.py:26 (ISSUE-5)",
+    "Consider moving httpx from runtime dependencies to dev-only — it's only needed at runtime for GitHub API enrichment in Phase 4",
+    "Move client fixture from test_health.py to conftest.py for reuse by future test files"
+  ],
+  "next_steps": [
+    "Fix ISSUE-1: Rename all 11 test functions to test_should_X_when_Y convention",
+    "Fix ISSUE-2: Add .env to backend/.gitignore",
+    "Re-request review after fixes"
+  ]
+}
