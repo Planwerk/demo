@@ -1,1 +1,11 @@
 .planwerk/.secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.coverage
+.venv/
+*.egg-info/
+dist/
+build/

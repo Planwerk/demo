@@ -18,7 +18,9 @@ def test_should_load_settings_when_valid_env_vars_set(monkeypatch: pytest.Monkey
 def test_should_use_defaults_when_optional_vars_omitted(monkeypatch: pytest.MonkeyPatch) -> None:
     """All optional settings use documented defaults."""
     monkeypatch.setenv("JWT_SECRET", "test-secret")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     s = Settings()
+    assert s.DATABASE_URL == "postgresql+asyncpg://user:pass@localhost:5432/statusboard"
     assert s.JWT_ACCESS_EXPIRE_MINUTES == 30
     assert s.JWT_REFRESH_EXPIRE_DAYS == 7
     assert s.CORS_ORIGINS == "http://localhost:3000"
@@ -51,6 +53,22 @@ def test_should_return_single_element_list_when_one_origin(
     monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000")
     s = Settings()
     assert s.cors_origins_list == ["http://localhost:3000"]
+
+
+def test_should_filter_empty_origins_when_trailing_comma(monkeypatch: pytest.MonkeyPatch) -> None:
+    """cors_origins_list ignores empty entries from trailing commas."""
+    monkeypatch.setenv("JWT_SECRET", "test-secret")
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000,")
+    s = Settings()
+    assert s.cors_origins_list == ["http://localhost:3000"]
+
+
+def test_should_return_empty_list_when_cors_origins_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    """cors_origins_list returns empty list when CORS_ORIGINS is empty string."""
+    monkeypatch.setenv("JWT_SECRET", "test-secret")
+    monkeypatch.setenv("CORS_ORIGINS", "")
+    s = Settings()
+    assert s.cors_origins_list == []
 
 
 def test_should_default_to_none_when_github_token_unset(monkeypatch: pytest.MonkeyPatch) -> None:

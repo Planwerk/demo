@@ -1,0 +1,110 @@
+{
+  "summary": "Backend scaffold with FastAPI, pydantic-settings config, async SQLAlchemy database layer, health check endpoint, unit tests, CI workflow, and reference docs. All planned tasks (1.1-5.1) are implemented. However, ruff check fails with 3 errors and 1 test fails due to a missing import, blocking merge.",
+  "verdict": "BLOCKED",
+  "tests_checklist": [
+    {"item": "Tests exist for all modules (config, database, health)", "checked": true},
+    {"item": "All tests pass (V1: pytest -v)", "checked": false},
+    {"item": "Edge cases covered (empty CORS, trailing comma, missing JWT_SECRET)", "checked": true},
+    {"item": "CORS disallowed-origin case tested", "checked": true},
+    {"item": "Test naming follows test_should_X_when_Y convention", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Follows existing code patterns", "checked": true},
+    {"item": "Functions small and focused (all under 10 lines)", "checked": true},
+    {"item": "Clear naming throughout", "checked": true},
+    {"item": "No dead code or commented-out code", "checked": true},
+    {"item": "Lint clean (V3: ruff check .)", "checked": false}
+  ],
+  "security_checklist": [
+    {"item": "No hardcoded secrets in app code (S3)", "checked": true},
+    {"item": "JWT_SECRET required with no default (S3)", "checked": true},
+    {"item": "CORS origins configurable, not wildcard (S1)", "checked": true},
+    {"item": "No SQL injection risk - ORM only (S2)", "checked": true},
+    {"item": "No sensitive data in logs (S5)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible (KISS)", "checked": true},
+    {"item": "Single responsibility per module", "checked": true},
+    {"item": "Standard FastAPI project structure", "checked": true},
+    {"item": "Async-first database layer", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code", "checked": true},
+    {"item": "No unused dependencies or over-engineering", "checked": true},
+    {"item": "No future-proofing beyond scope", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Settings validates at import time (missing JWT_SECRET raises ValidationError)", "checked": true},
+    {"item": "conftest.py sets JWT_SECRET before app imports", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "get_db uses async context manager for guaranteed session cleanup", "checked": true},
+    {"item": "cors_origins_list filters empty strings from splitting", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "V3-1",
+      "check": "V3",
+      "severity": "blocking",
+      "description": "ruff UP043: Unnecessary default type argument `None` in `AsyncGenerator[AsyncSession, None]`. Python 3.13+ allows `AsyncGenerator[AsyncSession]`.",
+      "location": "backend/app/database.py:18",
+      "fix": "Change return type to `AsyncGenerator[AsyncSession]` (remove `, None`)."
+    },
+    {
+      "id": "V3-2",
+      "check": "V3",
+      "severity": "blocking",
+      "description": "ruff F821: `AsyncSession` used in isinstance check but never imported. Causes both lint error and runtime NameError.",
+      "location": "backend/tests/unit/test_database.py:40",
+      "fix": "Add `from sqlalchemy.ext.asyncio import AsyncSession` to the imports at top of file (line 5 area, alongside existing AsyncEngine import)."
+    },
+    {
+      "id": "V3-3",
+      "check": "V3",
+      "severity": "blocking",
+      "description": "ruff SIM105: `try/except StopAsyncIteration: pass` should use `contextlib.suppress(StopAsyncIteration)`.",
+      "location": "backend/tests/unit/test_database.py:42-45",
+      "fix": "Replace try-except-pass block with `with contextlib.suppress(StopAsyncIteration): await gen.__anext__()`. Add `import contextlib` at top."
+    },
+    {
+      "id": "V1-1",
+      "check": "V1",
+      "severity": "blocking",
+      "description": "Test fails with NameError: name 'AsyncSession' is not defined. Same root cause as V3-2 (missing import).",
+      "location": "backend/tests/unit/test_database.py:40",
+      "fix": "Same fix as V3-2: add `from sqlalchemy.ext.asyncio import AsyncSession` to imports."
+    },
+    {
+      "id": "Q7-1",
+      "check": "Q7",
+      "severity": "major",
+      "description": "10 `__pycache__/*.pyc` files and `backend/.coverage` binary committed to git. Root `.gitignore` only contains `.planwerk/.secrets.toml`. No `backend/.gitignore` exists with Python-standard ignores.",
+      "location": "backend/app/__pycache__/, backend/app/api/__pycache__/, backend/app/api/routes/__pycache__/, backend/app/models/__pycache__/, backend/app/schemas/__pycache__/, backend/app/services/__pycache__/, backend/.coverage",
+      "fix": "Create `backend/.gitignore` with standard Python ignores (`__pycache__/`, `*.pyc`, `.coverage`, `*.egg-info/`, `dist/`, `build/`). Then remove committed artifacts with `git rm -r --cached backend/app/**/__pycache__/ backend/.coverage`."
+    }
+  ],
+  "suggested_improvements": [
+    "Consider adding `__pycache__/`, `*.pyc`, `.coverage`, `.venv/` to the root `.gitignore` as well, so no Python artifacts can ever be committed regardless of working directory."
+  ],
+  "next_steps": [
+    "Fix V3-2/V1-1: Add `from sqlalchemy.ext.asyncio import AsyncSession` import to tests/unit/test_database.py",
+    "Fix V3-1: Change `AsyncGenerator[AsyncSession, None]` to `AsyncGenerator[AsyncSession]` in app/database.py:18",
+    "Fix V3-3: Replace try-except-pass with `contextlib.suppress(StopAsyncIteration)` in tests/unit/test_database.py:42-45",
+    "Fix Q7-1: Create backend/.gitignore with Python-standard ignores and remove committed __pycache__/ and .coverage from git tracking",
+    "Re-run `uv run ruff check .` and `uv run pytest -v` to confirm all 3 blockers are resolved"
+  ],
+  "metadata": {
+    "feature_id": "PD-0001",
+    "title": "A001: Implement project scaffold and database layer",
+    "date": "2026-02-27",
+    "verdict": "BLOCKED",
+    "verification": {
+      "pytest": "17 passed, 1 FAILED (test_should_yield_async_session_when_get_db_iterated - NameError)",
+      "mypy_strict": "Success: no issues found in 9 source files",
+      "ruff_check": "3 errors (UP043, F821, SIM105)"
+    },
+    "review_number": 2
+  }
+}
