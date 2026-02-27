@@ -1,0 +1,85 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-27",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Backend scaffold is well-implemented and faithful to the spec. All 10 tasks completed: pyproject.toml, package structure, config.py (pydantic-settings), database.py (async SQLAlchemy), main.py (FastAPI + CORS + health), 12 passing tests, CI workflow, and reference docs. Code is clean, well-typed, and follows best practices. Two issues prevent APPROVED: (1) mypy is missing from dev dependencies and CI — per critical rule 7, all Python code must pass mypy --strict; (2) scaffold.md project structure diagram incorrectly places .github/ under backend/.",
+  "tests_checklist": [
+    {"item": "V1: All tests pass (uv run pytest)", "checked": true},
+    {"item": "V3: No lint errors (uv run ruff check .)", "checked": true},
+    {"item": "V2: No type errors (mypy --strict)", "checked": false},
+    {"item": "12 tests covering config, database, and health endpoint", "checked": true},
+    {"item": "TE1: Happy paths tested with realistic data", "checked": true},
+    {"item": "TE2: Edge cases covered (cors splitting, single/multi origin)", "checked": true},
+    {"item": "TE3: Error cases covered (missing JWT_SECRET raises ValidationError)", "checked": true},
+    {"item": "TE4: Tests independent (monkeypatch isolation)", "checked": true},
+    {"item": "TE7: Assertions specific (exact values, not just 'no error')", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do one thing (SRP)", "checked": true},
+    {"item": "Q2: Functions small (all < 10 lines)", "checked": true},
+    {"item": "Q3: No code duplication", "checked": true},
+    {"item": "Q4: Clear naming (intention-revealing)", "checked": true},
+    {"item": "Q7: No dead code or commented-out code", "checked": true},
+    {"item": "P1: Establishes clean patterns for subsequent features", "checked": true},
+    {"item": "P5: File locations match project structure conventions", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S2: No SQL injection (ORM only, no raw queries)", "checked": true},
+    {"item": "S3: No hardcoded secrets (JWT_SECRET required, no default)", "checked": true},
+    {"item": "S5: Sensitive data not exposed in logs (engine echo=False)", "checked": true},
+    {"item": "S1: Input validated at API boundaries (N/A — health check only)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible", "checked": true},
+    {"item": "Async-first design (async engine, async sessions, async endpoints)", "checked": true},
+    {"item": "get_db() uses async with for guaranteed session cleanup", "checked": true},
+    {"item": "Settings validated at startup via pydantic-settings", "checked": true},
+    {"item": "Package structure matches DDD conventions (models/schemas/api/services)", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code", "checked": true},
+    {"item": "No unnecessary abstractions", "checked": true},
+    {"item": "No premature features", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Missing JWT_SECRET detected at startup (ValidationError)", "checked": true},
+    {"item": "Settings instantiated at module level for immediate validation", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "Database session cleanup guaranteed via async context manager", "checked": true},
+    {"item": "CORS origins configurable via environment", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "V2",
+      "severity": "blocking",
+      "check": "V2",
+      "description": "mypy is not in dev dependencies and not run in CI. Per critical rule 7, all Python code must pass mypy --strict. When run manually (after pip install mypy), 5 errors appear — all import-not-found due to missing type stubs for pydantic-settings and fastapi. The code itself has full type annotations; the issue is tooling configuration only.",
+      "location": "backend/pyproject.toml:16-23",
+      "fix": "Add mypy and type stubs to dev dependencies: add 'mypy', 'types-pydantic-settings' (or pydantic-settings[mypy]) to [dependency-groups] dev. Add [tool.mypy] section with strict = true, plugins = ['pydantic.mypy']. Add a mypy step to CI workflow after ruff check."
+    },
+    {
+      "id": "DA3",
+      "severity": "major",
+      "check": "DA3",
+      "description": "scaffold.md project structure diagram shows .github/workflows/ci.yml under backend/ but the file is at the repository root (.github/workflows/ci.yml). This misrepresents the actual file location.",
+      "location": "docs/reference/backend/scaffold.md:30",
+      "fix": "Remove .github/workflows/ci.yml from the backend/ tree diagram. Add a separate section or note: 'CI configuration is at the repository root: .github/workflows/ci.yml'."
+    }
+  ],
+  "suggested_improvements": [
+    "TE5: Consider adopting test_should_X_when_Y naming convention for clarity (e.g., test_should_load_settings_when_valid_env_provided instead of test_settings_loads_with_valid_env)",
+    "test_health_no_auth_required (test_health.py:23) is currently identical in behavior to test_health_returns_200_ok — it only asserts status 200. Consider adding a comment explaining this test establishes intent for when auth middleware is added later, or remove it to avoid duplication",
+    "TE2: Add edge case test for cors_origins_list with whitespace in CORS_ORIGINS (e.g., 'http://a , http://b') to verify .strip() behavior",
+    "D1: conftest.py comment could explain WHY env vars are set before imports (module-level Settings() instantiation requires them)"
+  ],
+  "next_steps": [
+    "Add mypy + pydantic mypy plugin to dev dependencies and configure [tool.mypy] in pyproject.toml",
+    "Add mypy CI step to .github/workflows/ci.yml",
+    "Fix scaffold.md project structure diagram (.github/ is at repo root, not under backend/)",
+    "Re-run: uv run mypy app/ --strict — verify 0 errors"
+  ]
+}
