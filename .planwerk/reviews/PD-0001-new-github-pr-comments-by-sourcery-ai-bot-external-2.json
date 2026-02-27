@@ -1,0 +1,43 @@
+{
+  "feature_id": "PD-0001",
+  "title": "New GitHub PR comments by sourcery-ai[bot]",
+  "summary": "New inline comments added since last review",
+  "verdict": "NEEDS_CHANGES",
+  "tests_checklist": [],
+  "code_quality_checklist": [],
+  "security_checklist": [],
+  "architecture_checklist": [],
+  "dry_yagni_checklist": [],
+  "fail_fast_checklist": [],
+  "defensive_checklist": [],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [],
+  "suggested_improvements": [],
+  "next_steps": [],
+  "reviewer": "sourcery-ai[bot]",
+  "date": "2026-02-27T10:36:53Z",
+  "commit_reference": "comments:2863670712,2863670718",
+  "review_type": "external",
+  "sequence_number": 2,
+  "external_feedback": "## New Inline Comments\n- `backend/tests/unit/test_config.py:82` — \"**suggestion (testing):** Add edge-case tests for empty and malformed CORS_ORIGINS values\n\nConsider adding tests for edge cases like an empty string (`CORS_ORIGINS=\"\"`) or a trailing comma (`\"http://a,\"`). These currently yield `['']` or `['http://a', '']`, and tests would either confirm that this behavior is intended or surface the need to filter out empty values.\n\n```suggestion\n    def test_should_strip_whitespace_when_cors_origins_have_spaces(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"http://a , http://b\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"http://a\", \"http://b\"]\n\n    def test_should_allow_empty_string_cors_origins(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"\"]\n\n    def test_should_preserve_empty_entry_when_trailing_comma_in_cors_origins(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"http://a,\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"http://a\", \"\"]\n\n    def test_should_return_single_origin_when_no_comma(\n```\"\n- `backend/tests/unit/test_health.py:43` — \"**suggestion (testing):** Strengthen CORS tests with status code assertion and a negative-origin case\n\nPlease also add a test where the `Origin` is not in `settings.cors_origins_list` and assert that `access-control-allow-origin` is absent (or otherwise behaves as intended). That will cover both allowed and disallowed CORS paths and make the behavior clearer.\"",
+  "code_comments": [
+    {
+      "body": "**suggestion (testing):** Add edge-case tests for empty and malformed CORS_ORIGINS values\n\nConsider adding tests for edge cases like an empty string (`CORS_ORIGINS=\"\"`) or a trailing comma (`\"http://a,\"`). These currently yield `['']` or `['http://a', '']`, and tests would either confirm that this behavior is intended or surface the need to filter out empty values.\n\n```suggestion\n    def test_should_strip_whitespace_when_cors_origins_have_spaces(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"http://a , http://b\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"http://a\", \"http://b\"]\n\n    def test_should_allow_empty_string_cors_origins(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"\"]\n\n    def test_should_preserve_empty_entry_when_trailing_comma_in_cors_origins(\n        self, monkeypatch: pytest.MonkeyPatch\n    ) -> None:\n        monkeypatch.setenv(\"JWT_SECRET\", \"test-secret\")\n        monkeypatch.setenv(\"CORS_ORIGINS\", \"http://a,\")\n\n        from app.config import Settings\n\n        s = Settings()\n        assert s.cors_origins_list == [\"http://a\", \"\"]\n\n    def test_should_return_single_origin_when_no_comma(\n```",
+      "path": "backend/tests/unit/test_config.py",
+      "line": 82,
+      "author": "sourcery-ai[bot]",
+      "created_at": "2026-02-27T10:36:53Z",
+      "id": 2863670712
+    },
+    {
+      "body": "**suggestion (testing):** Strengthen CORS tests with status code assertion and a negative-origin case\n\nPlease also add a test where the `Origin` is not in `settings.cors_origins_list` and assert that `access-control-allow-origin` is absent (or otherwise behaves as intended). That will cover both allowed and disallowed CORS paths and make the behavior clearer.",
+      "path": "backend/tests/unit/test_health.py",
+      "line": 43,
+      "author": "sourcery-ai[bot]",
+      "created_at": "2026-02-27T10:36:53Z",
+      "id": 2863670718
+    }
+  ],
+  "resolved": true
+}

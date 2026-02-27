@@ -29,6 +29,7 @@ async def test_should_respond_without_auth_when_no_middleware_configured(
     response = await client.get("/api/v1/health")
 
     assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
 async def test_should_include_cors_headers_when_allowed_origin_sent(
@@ -58,4 +59,5 @@ async def test_should_not_include_cors_headers_when_disallowed_origin_sent(
         },
     )
 
+    assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers

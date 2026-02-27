@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    # Default is for local development only; override via DATABASE_URL env var in production.
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/statusboard"
     JWT_SECRET: str
     JWT_ACCESS_EXPIRE_MINUTES: int = 30
