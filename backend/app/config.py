@@ -20,7 +20,11 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         """Split comma-separated CORS_ORIGINS into a list."""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        return [
+            origin
+            for origin in (o.strip() for o in self.CORS_ORIGINS.split(","))
+            if origin
+        ]
 
 
 settings = Settings()

@@ -57,6 +57,28 @@ class TestSettings:
         s = Settings()
         assert s.cors_origins_list == ["http://a", "http://b"]
 
+    def test_should_filter_empty_strings_when_cors_origins_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("JWT_SECRET", "test-secret")
+        monkeypatch.setenv("CORS_ORIGINS", "")
+
+        from app.config import Settings
+
+        s = Settings()
+        assert s.cors_origins_list == []
+
+    def test_should_filter_empty_strings_when_cors_origins_has_trailing_comma(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("JWT_SECRET", "test-secret")
+        monkeypatch.setenv("CORS_ORIGINS", "http://a,")
+
+        from app.config import Settings
+
+        s = Settings()
+        assert s.cors_origins_list == ["http://a"]
+
     def test_should_return_single_origin_when_no_comma(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -4,13 +4,13 @@ version = "0.1.0"
 description = "A real-time team status update application"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "sqlalchemy[asyncio]",
-    "asyncpg",
-    "pydantic-settings",
-    "alembic",
-    "python-multipart",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "pydantic-settings>=2.7",
+    "alembic>=1.14",
+    "python-multipart>=0.0.18",
 ]
 
 [dependency-groups]

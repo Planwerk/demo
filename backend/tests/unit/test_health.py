@@ -42,5 +42,20 @@ async def test_should_include_cors_headers_when_allowed_origin_sent(
         },
     )
 
+    assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
     assert response.headers.get("access-control-allow-credentials") == "true"
+
+
+async def test_should_not_include_cors_headers_when_disallowed_origin_sent(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.options(
+        "/api/v1/health",
+        headers={
+            "Origin": "http://evil.com",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert "access-control-allow-origin" not in response.headers

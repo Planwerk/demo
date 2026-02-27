@@ -2,45 +2,48 @@
   "feature_id": "PD-0001",
   "title": "A001: Implement project scaffold and database layer",
   "date": "2026-02-27",
-  "verdict": "NEEDS_CHANGES",
-  "summary": "Backend scaffold is well-implemented and faithful to the spec. All 10 tasks completed: pyproject.toml, package structure, config.py (pydantic-settings), database.py (async SQLAlchemy), main.py (FastAPI + CORS + health), 12 passing tests, CI workflow, and reference docs. Code is clean, well-typed, and follows best practices. Two issues prevent APPROVED: (1) mypy is missing from dev dependencies and CI — per critical rule 7, all Python code must pass mypy --strict; (2) scaffold.md project structure diagram incorrectly places .github/ under backend/.",
+  "verdict": "APPROVED",
+  "summary": "Backend scaffold fully implements all 10 tasks across 5 levels. All automated checks pass: ruff clean, mypy --strict clean (9 source files, 0 errors), 16/16 pytest pass. Settings class contains all 8 required env vars, database.py exports all required symbols, health endpoint at GET /api/v1/health returns {'status': 'ok'}, CORS middleware configured, directory structure matches spec, CI workflow has lint and test-backend jobs. Code is minimal, well-typed, and follows established patterns. No blocking or major issues found.",
   "tests_checklist": [
-    {"item": "V1: All tests pass (uv run pytest)", "checked": true},
-    {"item": "V3: No lint errors (uv run ruff check .)", "checked": true},
-    {"item": "V2: No type errors (mypy --strict)", "checked": false},
-    {"item": "12 tests covering config, database, and health endpoint", "checked": true},
-    {"item": "TE1: Happy paths tested with realistic data", "checked": true},
-    {"item": "TE2: Edge cases covered (cors splitting, single/multi origin)", "checked": true},
-    {"item": "TE3: Error cases covered (missing JWT_SECRET raises ValidationError)", "checked": true},
-    {"item": "TE4: Tests independent (monkeypatch isolation)", "checked": true},
-    {"item": "TE7: Assertions specific (exact values, not just 'no error')", "checked": true}
+    {"item": "V1: All tests pass (16/16, uv run pytest)", "checked": true},
+    {"item": "V2: No type errors (mypy --strict, 9 source files, 0 issues)", "checked": true},
+    {"item": "V3: No lint errors (ruff check, all checks passed)", "checked": true},
+    {"item": "TE1: Happy paths tested — config loads, health returns 200, db exports correct", "checked": true},
+    {"item": "TE2: Edge cases — CORS splitting: empty, trailing comma, spaces, single origin", "checked": true},
+    {"item": "TE3: Error cases — missing JWT_SECRET raises ValidationError", "checked": true},
+    {"item": "TE4: Tests independent — monkeypatch isolation, no shared mutable state", "checked": true},
+    {"item": "TE5: Test names follow test_should_X_when_Y convention", "checked": true},
+    {"item": "TE6: Mocking appropriate — monkeypatch for env vars, ASGITransport for health", "checked": true},
+    {"item": "TE7: Assertions specific — exact values, status codes, header presence/absence", "checked": true}
   ],
   "code_quality_checklist": [
-    {"item": "Q1: Functions do one thing (SRP)", "checked": true},
-    {"item": "Q2: Functions small (all < 10 lines)", "checked": true},
+    {"item": "Q1: Functions do one thing (SRP) — each module has single responsibility", "checked": true},
+    {"item": "Q2: Functions small — all under 10 lines", "checked": true},
     {"item": "Q3: No code duplication", "checked": true},
-    {"item": "Q4: Clear naming (intention-revealing)", "checked": true},
-    {"item": "Q7: No dead code or commented-out code", "checked": true},
-    {"item": "P1: Establishes clean patterns for subsequent features", "checked": true},
-    {"item": "P5: File locations match project structure conventions", "checked": true}
+    {"item": "Q4: Clear naming — intention-revealing identifiers throughout", "checked": true},
+    {"item": "Q5: Max 3 nesting levels — no deep nesting anywhere", "checked": true},
+    {"item": "Q6: No magic numbers — defaults are documented env var values", "checked": true},
+    {"item": "Q7: No dead code — no unused functions or commented-out code", "checked": true}
   ],
   "security_checklist": [
-    {"item": "S2: No SQL injection (ORM only, no raw queries)", "checked": true},
-    {"item": "S3: No hardcoded secrets (JWT_SECRET required, no default)", "checked": true},
-    {"item": "S5: Sensitive data not exposed in logs (engine echo=False)", "checked": true},
-    {"item": "S1: Input validated at API boundaries (N/A — health check only)", "checked": true}
+    {"item": "S1: Input validation at API boundaries — N/A, only health check (no input)", "checked": true},
+    {"item": "S2: No SQL injection — ORM only, no raw queries in scaffold", "checked": true},
+    {"item": "S3: No hardcoded secrets — JWT_SECRET required (no default), DATABASE_URL default is dev-only per spec", "checked": true},
+    {"item": "S4: Authorization — N/A, no protected endpoints in scaffold", "checked": true},
+    {"item": "S5: Sensitive data not exposed — engine echo=False", "checked": true},
+    {"item": "S6: No path traversal — no file operations in scaffold", "checked": true}
   ],
   "architecture_checklist": [
-    {"item": "Solution is as simple as possible", "checked": true},
-    {"item": "Async-first design (async engine, async sessions, async endpoints)", "checked": true},
+    {"item": "Solution is as simple as possible — minimal scaffold, no over-engineering", "checked": true},
+    {"item": "Async-first design — async engine, async sessions, async endpoints", "checked": true},
     {"item": "get_db() uses async with for guaranteed session cleanup", "checked": true},
     {"item": "Settings validated at startup via pydantic-settings", "checked": true},
     {"item": "Package structure matches DDD conventions (models/schemas/api/services)", "checked": true}
   ],
   "dry_yagni_checklist": [
-    {"item": "No duplicated code", "checked": true},
-    {"item": "No unnecessary abstractions", "checked": true},
-    {"item": "No premature features", "checked": true}
+    {"item": "No duplicated code across modules", "checked": true},
+    {"item": "No unnecessary abstractions — direct use of SQLAlchemy/FastAPI APIs", "checked": true},
+    {"item": "No premature features — only what the spec requires", "checked": true}
   ],
   "fail_fast_checklist": [
     {"item": "Missing JWT_SECRET detected at startup (ValidationError)", "checked": true},
@@ -48,38 +51,17 @@
   ],
   "defensive_checklist": [
     {"item": "Database session cleanup guaranteed via async context manager", "checked": true},
-    {"item": "CORS origins configurable via environment", "checked": true}
+    {"item": "CORS origins configurable via environment, not hardcoded", "checked": true}
   ],
   "security_findings": [],
   "architecture_findings": [],
-  "issues_found": [
-    {
-      "id": "V2",
-      "severity": "blocking",
-      "check": "V2",
-      "description": "mypy is not in dev dependencies and not run in CI. Per critical rule 7, all Python code must pass mypy --strict. When run manually (after pip install mypy), 5 errors appear — all import-not-found due to missing type stubs for pydantic-settings and fastapi. The code itself has full type annotations; the issue is tooling configuration only.",
-      "location": "backend/pyproject.toml:16-23",
-      "fix": "Add mypy and type stubs to dev dependencies: add 'mypy', 'types-pydantic-settings' (or pydantic-settings[mypy]) to [dependency-groups] dev. Add [tool.mypy] section with strict = true, plugins = ['pydantic.mypy']. Add a mypy step to CI workflow after ruff check."
-    },
-    {
-      "id": "DA3",
-      "severity": "major",
-      "check": "DA3",
-      "description": "scaffold.md project structure diagram shows .github/workflows/ci.yml under backend/ but the file is at the repository root (.github/workflows/ci.yml). This misrepresents the actual file location.",
-      "location": "docs/reference/backend/scaffold.md:30",
-      "fix": "Remove .github/workflows/ci.yml from the backend/ tree diagram. Add a separate section or note: 'CI configuration is at the repository root: .github/workflows/ci.yml'."
-    }
-  ],
+  "issues_found": [],
   "suggested_improvements": [
-    "TE5: Consider adopting test_should_X_when_Y naming convention for clarity (e.g., test_should_load_settings_when_valid_env_provided instead of test_settings_loads_with_valid_env)",
-    "test_health_no_auth_required (test_health.py:23) is currently identical in behavior to test_health_returns_200_ok — it only asserts status 200. Consider adding a comment explaining this test establishes intent for when auth middleware is added later, or remove it to avoid duplication",
-    "TE2: Add edge case test for cors_origins_list with whitespace in CORS_ORIGINS (e.g., 'http://a , http://b') to verify .strip() behavior",
-    "D1: conftest.py comment could explain WHY env vars are set before imports (module-level Settings() instantiation requires them)"
+    "D2 (minor): CI runs pytest without --cov flag despite pytest-cov being installed. Consider adding --cov=app --cov-fail-under=80 to enforce coverage thresholds in future phases.",
+    "PF1 (minor): database.py:10 — create_async_engine uses default pool settings (pool_size=5, max_overflow=10). Consider explicit pool_size and pool_pre_ping=True when WebSocket features are added.",
+    "Q2 (minor): pyproject.toml:6-14 — dependencies lack lower-bound version pins. The lockfile ensures reproducibility, but lower bounds (e.g., fastapi>=0.115) would document minimum compatibility."
   ],
   "next_steps": [
-    "Add mypy + pydantic mypy plugin to dev dependencies and configure [tool.mypy] in pyproject.toml",
-    "Add mypy CI step to .github/workflows/ci.yml",
-    "Fix scaffold.md project structure diagram (.github/ is at repo root, not under backend/)",
-    "Re-run: uv run mypy app/ --strict — verify 0 errors"
+    "Proceed to next feature implementation — scaffold is ready for development"
   ]
 }
