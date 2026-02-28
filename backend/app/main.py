@@ -1,8 +1,9 @@
-"""FastAPI application entry point with CORS and health check."""
+"""FastAPI application entry point with CORS and middleware wiring."""
 
-from fastapi import APIRouter, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.router import api_router
 from app.config import settings
 
 app = FastAPI(title="Team Statusboard", version="0.1.0")
@@ -14,14 +15,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-api_router = APIRouter(prefix="/api/v1")
-
-
-@api_router.get("/health")
-async def health_check() -> dict[str, str]:
-    """Return service health status."""
-    return {"status": "ok"}
-
 
 app.include_router(api_router)

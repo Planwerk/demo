@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         """Split CORS_ORIGINS by comma and strip whitespace."""
-        return [o.strip() for o in self.cors_origins.split(",")]
+        return [o for o in (s.strip() for s in self.cors_origins.split(",")) if o]
 
 
 settings = Settings()

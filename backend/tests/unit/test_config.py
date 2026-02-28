@@ -44,6 +44,26 @@ def test_settings_reads_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.log_level == "DEBUG"
 
 
+def test_settings_uses_default_database_url_when_not_provided(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    from app.config import Settings
+
+    s = Settings(jwt_secret="s3cret")
+    assert s.database_url == "postgresql+asyncpg://localhost:5432/statusboard"
+
+
+def test_settings_uses_database_url_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://env-host/env-db")
+
+    from app.config import Settings
+
+    s = Settings(_env_file=None, jwt_secret="s3cret")
+    assert s.database_url == "postgresql+asyncpg://env-host/env-db"
+
+
 def test_cors_origins_list_splits_comma_separated() -> None:
     from app.config import Settings
 
@@ -56,6 +76,20 @@ def test_cors_origins_list_single_origin() -> None:
 
     s = Settings(jwt_secret="s3cret", cors_origins="http://localhost:3000")
     assert s.cors_origins_list == ["http://localhost:3000"]
+
+
+def test_cors_origins_list_filters_empty_elements() -> None:
+    from app.config import Settings
+
+    s = Settings(jwt_secret="s3cret", cors_origins=", http://a.com,, http://b.com ,")
+    assert s.cors_origins_list == ["http://a.com", "http://b.com"]
+
+
+def test_cors_origins_list_empty_string_returns_empty_list() -> None:
+    from app.config import Settings
+
+    s = Settings(jwt_secret="s3cret", cors_origins="")
+    assert s.cors_origins_list == []
 
 
 def test_module_level_settings_instance() -> None:

@@ -1,0 +1,101 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-28",
+  "verdict": "APPROVED",
+  "summary": "All review #1 issues and sourcery-ai feedback have been addressed. cors_origins_list property added to Settings with empty-string filtering and 4 edge-case tests. pyproject.toml corrected to [dependency-groups]. Router extracted to app/api/router.py. get_db rollback-on-exception test added. All 22 tests pass, ruff clean, mypy --strict clean. Two minor doc inaccuracies remain (non-blocking).",
+  "verification": {
+    "V1_pytest": {"status": "PASS", "detail": "22 passed in 0.33s (Python 3.13.5, pytest 9.0.2)"},
+    "V2_mypy": {"status": "PASS", "detail": "Success: no issues found in 10 source files (--strict)"},
+    "V3_ruff": {"status": "PASS", "detail": "All checks passed (ruff, select=[E,F,I,N,UP,B,SIM,ASYNC])"}
+  },
+  "review_1_resolution": {
+    "FC1-1_cors_origins_list": "FIXED — property added at config.py:21-24 with empty-string filtering; 4 tests in test_config.py (lines 67-92)",
+    "FC1-2_fastapi_version": "FIXED — version='0.1.0' present in main.py:9",
+    "P1-1_dependency_groups": "FIXED — pyproject.toml:25-34 uses [dependency-groups] dev",
+    "DA3-1_test_filenames": "FIXED — scaffold.md file tree shows test_main.py and test_scaffold.py",
+    "FC1-3_line_length": "FIXED — pyproject.toml:47 line-length=99"
+  },
+  "sourcery_ai_resolution": {
+    "database_url_default_test": "FIXED — test_settings_uses_default_database_url_when_not_provided at test_config.py:47-55",
+    "database_url_env_override_test": "FIXED — test_settings_uses_database_url_from_env at test_config.py:58-64",
+    "cors_empty_elements_test": "FIXED — test_cors_origins_list_filters_empty_elements at test_config.py:81-85 and test_cors_origins_list_empty_string_returns_empty_list at test_config.py:88-92",
+    "get_db_rollback_test": "FIXED — test_get_db_rolls_back_on_exception at test_database.py:41-55",
+    "router_extraction": "FIXED — api_router moved to app/api/router.py, main.py imports from app.api.router"
+  },
+  "tests_checklist": [
+    {"item": "Tests exist and pass — 22/22 passed (V1)", "checked": true},
+    {"item": "Happy path tested with realistic data (TE1)", "checked": true},
+    {"item": "Edge cases covered — missing JWT_SECRET, CORS empty strings, CORS extra commas, disallowed origin (TE2)", "checked": true},
+    {"item": "Error cases tested — ValidationError on missing JWT_SECRET, get_db rollback on exception (TE3)", "checked": true},
+    {"item": "Tests independent — monkeypatch used for env isolation, no shared mutable state (TE4)", "checked": true},
+    {"item": "Test names descriptive (TE5)", "checked": true},
+    {"item": "Mocking appropriate — mock session for rollback test, no over-mocking (TE6)", "checked": true},
+    {"item": "Assertions specific — exact values checked throughout (TE7)", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Functions do ONE thing — SRP (Q1)", "checked": true},
+    {"item": "Functions small — all under 10 lines (Q2)", "checked": true},
+    {"item": "No code duplication (Q3)", "checked": true},
+    {"item": "Clear naming — intention-revealing (Q4)", "checked": true},
+    {"item": "No deep nesting (Q5)", "checked": true},
+    {"item": "No magic numbers (Q6)", "checked": true},
+    {"item": "No dead code (Q7)", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "JWT_SECRET has no default — required at startup, ValidationError on missing (S3)", "checked": true},
+    {"item": "DATABASE_URL default contains no credentials — improved from spec which had user:pass@ (S3)", "checked": true},
+    {"item": "No hardcoded secrets in source (S3)", "checked": true},
+    {"item": "No SQL injection vectors — ORM only (S2)", "checked": true},
+    {"item": "No sensitive data in logs or errors (S5)", "checked": true},
+    {"item": "CORS properly restricts origins — disallowed origin test confirms (S1)", "checked": true},
+    {"item": "CI JWT_SECRET clearly marked 'not-for-production' (S3)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible (KISS)", "checked": true},
+    {"item": "File locations match project structure conventions (P5)", "checked": true},
+    {"item": "Follows DDD boundaries — config/database/api/main cleanly separated (P3)", "checked": true},
+    {"item": "API follows REST conventions — GET /health returns 200 (P4)", "checked": true},
+    {"item": "Directory structure matches README: models/, schemas/, api/routes/, services/ (P5)", "checked": true},
+    {"item": "Router extracted to app/api/router.py — main.py focused on app construction and middleware (P1)", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code (DRY)", "checked": true},
+    {"item": "No unused imports or dead code (YAGNI)", "checked": true},
+    {"item": "No over-engineering — minimal scaffold (YAGNI)", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Settings validated at import time — missing JWT_SECRET raises immediately (C4)", "checked": true},
+    {"item": "get_db() rolls back on exception before re-raising (C4)", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "cors_origins_list strips whitespace and filters empty strings (C3)", "checked": true},
+    {"item": "Session cleanup guaranteed via async context manager (C3)", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "DA3-1",
+      "severity": "minor",
+      "check": "DA3",
+      "file": "docs/reference/backend/scaffold.md",
+      "line": 133,
+      "description": "Import path `from app.main import api_router` is incorrect. The `api_router` is defined in `app.api.router`, not re-exported from `app.main`.",
+      "fix": "Change to `from app.api.router import api_router`."
+    },
+    {
+      "id": "DA3-2",
+      "severity": "minor",
+      "check": "DA3",
+      "file": "docs/reference/backend/scaffold.md",
+      "line": 20,
+      "description": "File tree omits `app/api/router.py` which exists in the actual project structure.",
+      "fix": "Add `router.py` under the `api/` directory in the file tree diagram."
+    }
+  ],
+  "suggested_improvements": [
+    "Fix docs/reference/backend/scaffold.md import path for api_router (from app.api.router, not app.main) and add router.py to the file tree"
+  ],
+  "next_steps": []
+}

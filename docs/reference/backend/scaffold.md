@@ -19,6 +19,7 @@ backend/
 │   ├── main.py             # FastAPI app, CORS middleware, API router
 │   ├── api/
 │   │   ├── __init__.py
+│   │   ├── router.py          # APIRouter with /api/v1 prefix, health endpoint
 │   │   └── routes/
 │   │       └── __init__.py
 │   ├── models/
@@ -127,10 +128,14 @@ from app.main import app
 
 `FastAPI` instance with `title="Team Statusboard"`. CORS middleware is configured from `settings.cors_origins` (split on `,`), with `allow_credentials=True`, `allow_methods=["*"]`, `allow_headers=["*"]`.
 
+## `app.api.router`
+
+**Module:** `app/api/router.py`
+
 ### `api_router`
 
 ```python
-from app.main import api_router
+from app.api.router import api_router
 ```
 
 `APIRouter` with `prefix="/api/v1"`. All versioned endpoints are registered on this router.
