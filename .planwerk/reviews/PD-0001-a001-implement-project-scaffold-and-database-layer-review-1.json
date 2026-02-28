@@ -1,0 +1,118 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-28",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Backend scaffold is solid: pyproject.toml, config.py, database.py, main.py, tests, CI workflow, and docs all present and functional. All 15 tests pass, ruff and mypy --strict are clean. Three issues require attention: (1) missing cors_origins_list property on Settings per task 2.1, (2) pyproject.toml uses [project.optional-dependencies] instead of [dependency-groups] causing CI --dev flag mismatch, (3) docs reference test_health.py but actual file is test_main.py.",
+  "verification": {
+    "V1_pytest": {"status": "PASS", "detail": "15 passed in 0.31s (Python 3.13.5)"},
+    "V2_mypy": {"status": "PASS", "detail": "Success: no issues found in 9 source files (--strict)"},
+    "V3_ruff": {"status": "PASS", "detail": "All checks passed (ruff 0.15.4)"}
+  },
+  "tests_checklist": [
+    {"item": "Tests exist and pass (V1)", "checked": true},
+    {"item": "Happy path tested with realistic data (TE1)", "checked": true},
+    {"item": "Edge cases covered — missing JWT_SECRET, CORS disallowed origin (TE2)", "checked": true},
+    {"item": "Error cases tested — ValidationError on missing required field (TE3)", "checked": true},
+    {"item": "Tests independent — monkeypatch used for env isolation (TE4)", "checked": true},
+    {"item": "Test names descriptive (TE5)", "checked": true},
+    {"item": "Mocking appropriate — no over-mocking (TE6)", "checked": true},
+    {"item": "Assertions specific — exact values checked (TE7)", "checked": true},
+    {"item": "Missing: test for cors_origins_list property with multiple origins (TE2)", "checked": false}
+  ],
+  "code_quality_checklist": [
+    {"item": "Functions do ONE thing — SRP (Q1)", "checked": true},
+    {"item": "Functions small — all under 10 lines (Q2)", "checked": true},
+    {"item": "No code duplication (Q3)", "checked": true},
+    {"item": "Clear naming — intention-revealing (Q4)", "checked": true},
+    {"item": "No deep nesting (Q5)", "checked": true},
+    {"item": "No magic numbers (Q6)", "checked": true},
+    {"item": "No dead code (Q7)", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "JWT_SECRET has no default — required at startup (S3)", "checked": true},
+    {"item": "DATABASE_URL default contains no credentials (S3)", "checked": true},
+    {"item": "No hardcoded secrets in source (S3)", "checked": true},
+    {"item": "No SQL injection vectors — ORM only (S2)", "checked": true},
+    {"item": "No sensitive data in logs or errors (S5)", "checked": true},
+    {"item": "CORS properly restricts origins (S1)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible (KISS)", "checked": true},
+    {"item": "File locations match project structure conventions (P5)", "checked": true},
+    {"item": "Follows DDD boundaries — config/database/main cleanly separated (P3)", "checked": true},
+    {"item": "API follows REST conventions — GET /health returns 200 (P4)", "checked": true},
+    {"item": "Directory structure matches README: models/, schemas/, api/routes/, services/ (P5)", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code (DRY)", "checked": true},
+    {"item": "No unused imports or dead code (YAGNI)", "checked": true},
+    {"item": "No over-engineering — minimal scaffold (YAGNI)", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Settings validated at import time — missing JWT_SECRET raises immediately (C4)", "checked": true},
+    {"item": "get_db() rolls back on exception before re-raising (C4)", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "CORS origins stripped of whitespace in main.py (C3)", "checked": true},
+    {"item": "Session cleanup guaranteed via async context manager (C3)", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "FC1-1",
+      "severity": "major",
+      "check": "FC1",
+      "file": "backend/app/config.py",
+      "line": 7,
+      "description": "Missing `cors_origins_list` property on Settings class. Task 2.1 explicitly requires: 'Add property cors_origins_list that splits CORS_ORIGINS by comma.' Task 3.1 requires a test: 'cors_origins_list splits comma-separated string correctly.' Instead, CORS splitting is done inline in main.py:12. The specified API surface is missing.",
+      "fix": "Add `@property def cors_origins_list(self) -> list[str]: return [o.strip() for o in self.cors_origins.split(',')]` to Settings class. Update main.py:12 to use `settings.cors_origins_list`. Add test in test_config.py for multi-origin splitting."
+    },
+    {
+      "id": "FC1-2",
+      "severity": "minor",
+      "check": "FC1",
+      "file": "backend/app/main.py",
+      "line": 8,
+      "description": "Task 2.3 specifies `app = FastAPI(title='Team Statusboard', version='0.1.0')` but version kwarg is missing.",
+      "fix": "Add `version='0.1.0'` to the FastAPI constructor."
+    },
+    {
+      "id": "P1-1",
+      "severity": "major",
+      "check": "P1",
+      "file": "backend/pyproject.toml",
+      "line": 23,
+      "description": "Dev dependencies use `[project.optional-dependencies] dev` instead of `[dependency-groups] dev` per task 1.1. This causes `uv sync --dev` (used in CI) to silently skip dev dependency installation. Verified locally: `uv sync --dev` exits 0 but does not install ruff/pytest into the venv. CI may still work because `uv run` resolves tools on-the-fly, but the intent is wrong and behavior depends on uv version.",
+      "fix": "Replace `[project.optional-dependencies]` with `[dependency-groups]` section: `[dependency-groups]\\ndev = [\"pytest>=8.3\", ...]`. Alternatively, change CI to use `uv sync --extra dev`."
+    },
+    {
+      "id": "DA3-1",
+      "severity": "minor",
+      "check": "DA3",
+      "file": "docs/reference/backend/scaffold.md",
+      "line": 34,
+      "description": "File tree in docs references `test_health.py` but actual test file is `test_main.py`. Also missing `test_scaffold.py` from the tree.",
+      "fix": "Update the file tree in scaffold.md to show `test_main.py` and `test_scaffold.py` instead of `test_health.py`."
+    },
+    {
+      "id": "FC1-3",
+      "severity": "minor",
+      "check": "FC1",
+      "file": "backend/pyproject.toml",
+      "line": 39,
+      "description": "Task 1.1 specifies line-length=99 but implementation uses line-length=120. Minor spec deviation.",
+      "fix": "Change to `line-length = 99` if strict spec compliance required, or document the deviation."
+    }
+  ],
+  "suggested_improvements": [
+    "Consider using `httpx.AsyncClient` with `ASGITransport` in test_main.py as specified in task 3.3, instead of sync `TestClient` — both work but async client matches the project's async-first approach",
+    "Add a `@computed_field` or `@property` for `cors_origins_list` to centralize CORS parsing logic and make the Settings API match the spec"
+  ],
+  "next_steps": [
+    "Add `cors_origins_list` property to Settings and corresponding test (FC1-1)",
+    "Fix pyproject.toml to use `[dependency-groups]` instead of `[project.optional-dependencies]` (P1-1)",
+    "Update docs/reference/backend/scaffold.md file tree to match actual test filenames (DA3-1)"
+  ]
+}
