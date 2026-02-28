@@ -1,0 +1,137 @@
+{
+  "summary": "Backend scaffold implementing FastAPI app with pydantic-settings config, async SQLAlchemy database layer, health check endpoint, CORS middleware, project structure with sub-packages, 11 passing unit tests, ruff/pytest configuration, GitHub Actions CI, and reference documentation. All 10 tasks and REQ-001 through REQ-010 are implemented. Code is clean, minimal, and well-structured. Two issues found: mypy --strict fails due to missing type stub packages and configuration (V2), and test edge/error case coverage has gaps (TE2, TE3).",
+  "verdict": "NEEDS_CHANGES",
+  "tests_checklist": [
+    {"item": "V1: All 11 tests pass (pytest -v --tb=short)", "checked": true},
+    {"item": "V3: Ruff check passes with zero errors", "checked": true},
+    {"item": "TE1: Happy paths tested with realistic data (config, database, health, CORS)", "checked": true},
+    {"item": "TE4: Tests independent - monkeypatch for env isolation, function-scoped fixtures", "checked": true},
+    {"item": "TE5: Test names descriptive and intention-revealing", "checked": true},
+    {"item": "TE6: Mocking appropriate - monkeypatch for env vars, real objects elsewhere", "checked": true},
+    {"item": "TE7: Assertions specific - exact equality, type checks, header presence", "checked": true},
+    {"item": "TE2: Edge cases covered (empty inputs, boundary values)", "checked": false},
+    {"item": "TE3: Error cases covered (invalid input, failures)", "checked": false}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do one thing (health, cors_origins_list, get_db)", "checked": true},
+    {"item": "Q2: Functions small - all under 5 lines", "checked": true},
+    {"item": "Q3: No code duplication", "checked": true},
+    {"item": "Q4: Clear naming - intention-revealing, no abbreviations", "checked": true},
+    {"item": "Q5: Max 1 nesting level in all functions", "checked": true},
+    {"item": "Q6: No magic numbers - all config values are named fields", "checked": true},
+    {"item": "Q7: No dead code - all code is live and tested", "checked": true},
+    {"item": "P1: Follows established FastAPI/SQLAlchemy/pydantic-settings patterns", "checked": true},
+    {"item": "P2: Uses framework utilities (BaseSettings, async_sessionmaker, CORSMiddleware)", "checked": true},
+    {"item": "P3: Clear module boundaries (config/database/main)", "checked": true},
+    {"item": "P4: REST conventions (GET /api/v1/health, 200 OK)", "checked": true},
+    {"item": "P5: File locations match project structure conventions", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S1: No user input at API boundaries yet (health endpoint is static)", "checked": true},
+    {"item": "S2: No SQL injection risk - SQLAlchemy ORM used exclusively", "checked": true},
+    {"item": "S3: JWT_SECRET has no default (required field) - no hardcoded production secrets", "checked": true},
+    {"item": "S4: Health endpoint is public by design - no auth required", "checked": true},
+    {"item": "S5: Database engine echo=False prevents SQL logging", "checked": true},
+    {"item": "S6: No file operations - no path traversal risk", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is minimal - 75 lines of source across 3 modules", "checked": true},
+    {"item": "Clean separation: config -> database -> main (no circular deps)", "checked": true},
+    {"item": "Sub-packages (models, schemas, api/routes, services) ready for features", "checked": true},
+    {"item": "get_db() uses async with for guaranteed session cleanup including on errors", "checked": true},
+    {"item": "FC1: All 10 tasks implemented", "checked": true},
+    {"item": "FC2: No stubs, TODOs, or placeholders in source code", "checked": true},
+    {"item": "FC3: All logic fully working and tested", "checked": true},
+    {"item": "FC4: Health endpoint, config validation, CORS work end-to-end", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code across modules", "checked": true},
+    {"item": "No unused imports or functions", "checked": true},
+    {"item": "No speculative features or future-proofing", "checked": true},
+    {"item": "Empty __init__.py files are intentional scaffolding per spec", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Missing JWT_SECRET raises ValidationError at import time", "checked": true},
+    {"item": "Settings validated at startup via pydantic-settings", "checked": true},
+    {"item": "Database session cleanup guaranteed via async context manager", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "JWT_SECRET is required with no default - prevents accidental insecure deployments", "checked": true},
+    {"item": "CORS origins configured from environment, not hardcoded wildcard", "checked": true},
+    {"item": "Session factory uses expire_on_commit=False for async safety", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "V2",
+      "severity": "major",
+      "check_id": "V2",
+      "description": "mypy --strict fails with 5 errors: missing type stubs for pydantic_settings (import-not-found), fastapi (import-not-found), fastapi.middleware.cors (import-not-found); BaseSettings subclass has type Any (misc); router.get decorator makes health() untyped (untyped-decorator). Root cause: mypy is not in dev dependencies and no mypy configuration exists in pyproject.toml.",
+      "location": "backend/pyproject.toml",
+      "fix": "Add mypy to dev dependencies: 'mypy>=1.14.0'. Add [tool.mypy] section with plugins=['pydantic.mypy'], disallow_untyped_defs=true, ignore_missing_imports=false. The actual type annotations in the source code are correct - this is a tooling setup gap, not a code quality issue."
+    },
+    {
+      "id": "TE2",
+      "severity": "major",
+      "check_id": "TE2",
+      "description": "Edge case test coverage is thin. Only 1 edge case tested (comma-separated CORS splitting). Missing tests: empty CORS_ORIGINS string, single-origin CORS_ORIGINS (no comma), CORS_ORIGINS with whitespace around commas, disallowed CORS origin rejection.",
+      "location": "backend/tests/unit/test_config.py",
+      "fix": "Add tests: test_cors_origins_list_handles_single_origin, test_cors_origins_list_strips_whitespace. In test_health.py add: test_cors_headers_absent_for_disallowed_origin."
+    },
+    {
+      "id": "TE3",
+      "severity": "major",
+      "check_id": "TE3",
+      "description": "Error case coverage is minimal. Only 1 error test (missing JWT_SECRET). Missing: test that get_db() closes session even when the caller raises an exception. This is a core requirement from the user story ('get_db dependency closes session after request including on errors').",
+      "location": "backend/tests/unit/test_database.py",
+      "fix": "Add test_get_db_closes_session_on_exception: mock AsyncSessionLocal to return a mock session, iterate the generator, inject an exception, and assert session.__aexit__ was called."
+    }
+  ],
+  "suggested_improvements": [
+    "D1 (minor): conftest.py could define a reusable settings_env fixture that sets JWT_SECRET and DATABASE_URL, reducing repetition across test_config.py tests",
+    "PF3 (minor): Consider adding pool_pre_ping=True to create_async_engine for connection liveness validation in production",
+    "D2 (minor): CI workflow uses actions/setup-python + astral-sh/setup-uv - could simplify to just astral-sh/setup-uv@v4 with python-version parameter"
+  ],
+  "next_steps": [
+    "Add mypy to dev dependencies and configure [tool.mypy] in pyproject.toml to satisfy V2",
+    "Add edge case tests for CORS handling (TE2): single origin, whitespace, disallowed origin",
+    "Add error path test for get_db() session cleanup on exception (TE3)",
+    "Re-run review after fixes to confirm APPROVED status"
+  ],
+  "metadata": {
+    "feature_id": "PD-0001",
+    "title": "A001: Implement project scaffold and database layer",
+    "date": "2026-02-28",
+    "verdict": "NEEDS_CHANGES",
+    "verification": {
+      "uv_sync": "PASS - installs cleanly with Python 3.13",
+      "ruff_check": "PASS - zero errors",
+      "pytest": "PASS - 11/11 tests passed in 0.31s",
+      "mypy_strict": "FAIL - 5 errors (missing stubs, no mypy config)",
+      "directory_structure": "PASS - all sub-packages present",
+      "ci_workflow": "PASS - lint and test-backend jobs correctly configured"
+    },
+    "requirements_coverage": {
+      "REQ-001": "PASS - pyproject.toml with all runtime and dev dependencies",
+      "REQ-002": "PASS - Settings class with all 8 env vars and cors_origins_list property",
+      "REQ-003": "PASS - async_engine created from DATABASE_URL with asyncpg",
+      "REQ-004": "PASS - get_db() async generator with async-with cleanup",
+      "REQ-005": "PASS - CORSMiddleware configured from settings.cors_origins_list",
+      "REQ-006": "PASS - GET /api/v1/health returns 200 {'status': 'ok'}",
+      "REQ-007": "PASS - ruff configured with py313, select E/F/I/UP/B/SIM",
+      "REQ-008": "PASS - pytest configured with asyncio_mode=auto, testpaths=[tests]",
+      "REQ-009": "PASS - CI workflow with lint + test-backend jobs, PostgreSQL service",
+      "REQ-010": "PASS - directory structure matches spec with all sub-packages"
+    },
+    "stats": {
+      "source_files": 3,
+      "source_lines": 75,
+      "test_files": 3,
+      "test_lines": 111,
+      "tests_total": 11,
+      "tests_passed": 11,
+      "tests_failed": 0
+    }
+  }
+}
