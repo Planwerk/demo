@@ -1,0 +1,102 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-28",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Backend scaffold is functionally complete: pyproject.toml installs cleanly (uv sync), FastAPI app with CORS and health check works, async SQLAlchemy engine/session factory with lazy initialization, pydantic-settings config with all 8 env vars, 16 passing tests, ruff clean, mypy --strict clean, CI workflow with lint + test-backend jobs. Sourcery-ai feedback fully addressed (empty CORS filtering, placeholder credentials, whitespace JWT_SECRET validation). Two documentation alignment issues remain in docs/reference/backend/scaffold.md that must be corrected before merge.",
+  "tests_checklist": [
+    {"item": "V1: All 16 tests pass (pytest -v --tb=short)", "checked": true},
+    {"item": "V2: mypy app/ --strict — no issues found in 9 source files", "checked": true},
+    {"item": "V3: ruff check . — all checks passed", "checked": true},
+    {"item": "TE1: Happy path tested with realistic data (Settings with all env vars, health endpoint 200)", "checked": true},
+    {"item": "TE2: Edge cases tested (whitespace JWT_SECRET, trailing comma CORS, empty CORS entries, None GITHUB_TOKEN)", "checked": true},
+    {"item": "TE3: Error cases tested (missing JWT_SECRET, empty JWT_SECRET, whitespace-only JWT_SECRET → ValidationError)", "checked": true},
+    {"item": "TE4: Tests independent (each uses monkeypatch for isolated env, separate Settings instances)", "checked": true},
+    {"item": "TE5: Test names descriptive via class + method naming convention", "checked": true},
+    {"item": "TE6: Mocking appropriate (monkeypatch for env vars, ASGITransport for in-process HTTP)", "checked": true},
+    {"item": "TE7: Assertions specific (exact values, status codes, JSON bodies, header values)", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do ONE thing (Single Responsibility)", "checked": true},
+    {"item": "Q2: Functions small (all under 10 lines)", "checked": true},
+    {"item": "Q3: No code duplication", "checked": true},
+    {"item": "Q4: Clear naming (get_engine, get_session_factory, cors_origins_list)", "checked": true},
+    {"item": "Q5: No deep nesting (max 1 level)", "checked": true},
+    {"item": "Q6: No magic numbers/strings (all values in Settings defaults or named constants)", "checked": true},
+    {"item": "Q7: No dead code", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S1: Config inputs validated via pydantic-settings at startup (fail-fast)", "checked": true},
+    {"item": "S2: No SQL injection risk (no queries in scaffold)", "checked": true},
+    {"item": "S3: No hardcoded secrets (JWT_SECRET required, DATABASE_URL default uses USER:PASSWORD placeholder)", "checked": true},
+    {"item": "S4: Authorization N/A — only unauthenticated health check endpoint", "checked": true},
+    {"item": "S5: Sensitive data not exposed (echo=False on engine, no credential logging)", "checked": true},
+    {"item": "S6: No path traversal risk (no file operations)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "C1: Implements requested scaffold (pyproject, config, database, app, tests, CI, docs)", "checked": true},
+    {"item": "C2: All 10 tasks completed per plan", "checked": true},
+    {"item": "C3: Edge cases handled (blank JWT_SECRET, trailing commas in CORS, empty CORS entries)", "checked": true},
+    {"item": "C4: Errors raised explicitly (ValidationError on missing/blank JWT_SECRET)", "checked": true},
+    {"item": "C5: No regression (greenfield scaffold)", "checked": true},
+    {"item": "FC1: All 10 tasks implemented — no missing functionality", "checked": true},
+    {"item": "FC2: No stubs, placeholders, or TODO comments", "checked": true},
+    {"item": "FC3: All functions fully working (health endpoint, config validation, session factory)", "checked": true},
+    {"item": "FC4: Health endpoint, CORS preflight, config validation work end-to-end in tests", "checked": true},
+    {"item": "P1: Follows FastAPI/SQLAlchemy async conventions", "checked": true},
+    {"item": "P5: File locations match README project structure", "checked": true},
+    {"item": "Solution uses lazy initialization — avoids import-time side effects", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code across modules", "checked": true},
+    {"item": "No unused code or over-engineering", "checked": true},
+    {"item": "No premature abstractions", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Missing/blank JWT_SECRET raises ValidationError at import time", "checked": true},
+    {"item": "Database session cleanup guaranteed via async context manager", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "All config inputs validated via pydantic-settings type coercion and field_validator", "checked": true},
+    {"item": "get_db() uses async-with for guaranteed session cleanup on success and error", "checked": true},
+    {"item": "CORS origins list filters empty entries from trailing/double commas", "checked": true}
+  ],
+  "type_safety_checklist": [
+    {"item": "T1: All functions have type annotations (params + return)", "checked": true},
+    {"item": "T2: No bare Any", "checked": true},
+    {"item": "T3: type: ignore[call-arg] in tests justified (pydantic-settings _env_file kwarg not in type stubs)", "checked": true},
+    {"item": "T4: Generic types properly constrained (AsyncGenerator[AsyncSession], async_sessionmaker[AsyncSession])", "checked": true},
+    {"item": "T5: Optional types handled (GITHUB_TOKEN: str | None with None default)", "checked": true}
+  ],
+  "docs_alignment_checklist": [
+    {"item": "DA1: README structure matches implementation (directory layout, env vars)", "checked": true},
+    {"item": "DA2: README capabilities for this feature (health check, CORS, config) are built and working", "checked": true},
+    {"item": "DA3: docs/reference/backend/scaffold.md accurately reflects implementation", "checked": false, "note": "Two mismatches: (1) Database section documents 'async_engine' and 'AsyncSessionLocal' as exports but code exports get_engine() and get_session_factory(); (2) DATABASE_URL default shown as 'user:pass' but code uses 'USER:PASSWORD'"}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "DA3-MAJOR-01",
+      "severity": "MAJOR",
+      "check_id": "DA3",
+      "description": "docs/reference/backend/scaffold.md documents database module exports using names that don't exist in code. Section '### `async_engine`' implies a direct export, but the actual export is `get_engine() -> AsyncEngine`. Section '### `AsyncSessionLocal`' implies a direct export, but the actual export is `get_session_factory() -> async_sessionmaker[AsyncSession]`. A developer reading these docs would attempt `from app.database import async_engine` and get an ImportError.",
+      "location": "docs/reference/backend/scaffold.md:37-43",
+      "fix": "Rename section headings to match actual exports: '### `get_engine()`' with description 'Returns an `AsyncEngine` created lazily via `create_async_engine(settings.DATABASE_URL, echo=False)`. Uses the `asyncpg` driver.' and '### `get_session_factory()`' with description 'Returns an `async_sessionmaker[AsyncSession]` bound to the engine with `expire_on_commit=False`. Created lazily on first call.'"
+    },
+    {
+      "id": "DA3-MAJOR-02",
+      "severity": "MAJOR",
+      "check_id": "DA3",
+      "description": "DATABASE_URL default value in env vars table shows 'postgresql+asyncpg://user:pass@localhost:5432/statusboard' but the actual code default (after sourcery-ai fix) is 'postgresql+asyncpg://USER:PASSWORD@localhost:5432/statusboard'.",
+      "location": "docs/reference/backend/scaffold.md:14",
+      "fix": "Update the DATABASE_URL default column to: `postgresql+asyncpg://USER:PASSWORD@localhost:5432/statusboard`"
+    }
+  ],
+  "suggested_improvements": [],
+  "next_steps": [
+    "Fix DA3-MAJOR-01: Update docs/reference/backend/scaffold.md database section headings to match actual exports (get_engine, get_session_factory)",
+    "Fix DA3-MAJOR-02: Update DATABASE_URL default in docs env vars table to match code (USER:PASSWORD)",
+    "Re-request review after docs corrections"
+  ]
+}
