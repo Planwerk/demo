@@ -98,6 +98,7 @@ github_account = "berendt"
 name = "Christian Berendt"
 email = "berendt@b42labs.com"
 trailers = [
+    "AI-assisted: Claude Code",
     "Signed-off-by: Christian Berendt <berendt@b42labs.com>",
 ]
 
