@@ -632,6 +632,8 @@
       "timestamp": "2026-02-28T19:04:37.532016"
     }
   },
+  "github_pr": "https://github.com/Planwerk/demo/pull/11",
+  "pr_number": 11,
   "execution_history": [
     {
       "run_id": "ffe31819-8c03-459b-8b39-2cb0592ac1e9",
