@@ -1,0 +1,1 @@
+"""Team Statusboard backend application."""
