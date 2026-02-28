@@ -1,0 +1,120 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-28",
+  "verdict": "APPROVED",
+  "summary": "Scaffold is complete, correct, and addresses all suggested improvements from review-2. All 15 tests pass (up from 12), ruff clean, mypy --strict clean. The three new tests cover the edge cases recommended in review-2: empty CORS_ORIGINS, disallowed CORS origin rejection, and get_db rollback on exception. Code is minimal (89 lines across 3 source files), well-structured, and implements all 10 requirements. One minor hygiene issue: backend/.coverage binary is committed to git.",
+  "verification": {
+    "uv_sync": "PASS — uv sync --python /usr/bin/python3.13 installs 43 packages without errors",
+    "ruff_check": "PASS — All checks passed, exit code 0",
+    "pytest": "PASS — 15 passed in 0.33s (5 config, 6 database, 4 health)",
+    "mypy_strict": "PASS — Success: no issues found in 9 source files"
+  },
+  "previous_review_resolution": {
+    "review2_empty_cors_test": "FIXED — test_cors_origins_list_empty_string_returns_empty_list added at tests/unit/test_config.py:41-44",
+    "review2_disallowed_cors_test": "FIXED — test_cors_rejects_disallowed_origin added at tests/unit/test_health.py:48-61",
+    "review2_get_db_rollback_test": "FIXED — test_get_db_rolls_back_on_exception added at tests/unit/test_database.py:42-56"
+  },
+  "tests_checklist": [
+    {"item": "V1: All 15 tests pass (pytest -v)", "checked": true},
+    {"item": "V2: mypy --strict passes on all 9 source files", "checked": true},
+    {"item": "V3: ruff check passes with zero errors", "checked": true},
+    {"item": "TE1: Config happy path — valid env loads with all defaults verified", "checked": true},
+    {"item": "TE2: Config edge — empty CORS_ORIGINS returns empty list", "checked": true},
+    {"item": "TE2: Config edge — GITHUB_TOKEN defaults to None", "checked": true},
+    {"item": "TE3: Config error — missing JWT_SECRET raises ValidationError", "checked": true},
+    {"item": "TE1: Database — Base is DeclarativeBase subclass", "checked": true},
+    {"item": "TE1: Database — get_db is async generator", "checked": true},
+    {"item": "TE1: Database — engine uses asyncpg driver", "checked": true},
+    {"item": "TE1: Database — AsyncSessionLocal is async_sessionmaker", "checked": true},
+    {"item": "TE1: Database — get_db yields AsyncSession", "checked": true},
+    {"item": "TE3: Database — get_db rolls back on exception, re-raises", "checked": true},
+    {"item": "TE1: Health — GET /api/v1/health returns 200 {status: ok}", "checked": true},
+    {"item": "TE1: Health — no auth required", "checked": true},
+    {"item": "TE1: Health — CORS headers present for allowed origin", "checked": true},
+    {"item": "TE2: Health — CORS rejects disallowed origin (no access-control-allow-origin)", "checked": true},
+    {"item": "TE4: Tests independent — each creates fresh client/session, no shared mutable state", "checked": true},
+    {"item": "TE6: Mocking appropriate — only in rollback test (AsyncMock + patch)", "checked": true},
+    {"item": "TE7: Assertions specific — exact values checked (status codes, JSON bodies, header values)", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Q1: Functions do one thing — SRP throughout", "checked": true},
+    {"item": "Q2: All functions under 10 lines", "checked": true},
+    {"item": "Q3: No code duplication", "checked": true},
+    {"item": "Q4: Clear naming — Settings, Base, get_db, health_check, cors_origins_list", "checked": true},
+    {"item": "Q5: No excessive nesting — max 2 levels", "checked": true},
+    {"item": "Q6: No magic numbers — all defaults as typed Settings fields", "checked": true},
+    {"item": "Q7: No dead code in source files", "checked": true},
+    {"item": "T1: All functions have type annotations (params + return)", "checked": true},
+    {"item": "T2: No bare Any types", "checked": true},
+    {"item": "T3: No type: ignore", "checked": true},
+    {"item": "T5: Optional types properly handled — str | None for GITHUB_TOKEN", "checked": true}
+  ],
+  "security_checklist": [
+    {"item": "S1: Health check has no user input — N/A for scaffold, appropriate", "checked": true},
+    {"item": "S2: No SQL injection — ORM-only, no raw SQL", "checked": true},
+    {"item": "S3: JWT_SECRET required with no default — fails fast on missing secret", "checked": true},
+    {"item": "S3: DATABASE_URL default contains dev-only placeholder credentials — acceptable per spec", "checked": true},
+    {"item": "S4: Health check correctly public — no auth on health endpoint", "checked": true},
+    {"item": "S5: No sensitive data in logs or error responses", "checked": true},
+    {"item": "S6: No file path handling — no path traversal vectors", "checked": true},
+    {"item": "CORS explicitly configured from settings, not hardcoded wildcard origins", "checked": true},
+    {"item": "CORS rejects disallowed origins (verified by test)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is minimal — 3 source files totaling 89 lines (KISS)", "checked": true},
+    {"item": "Directory structure matches spec: app/{models,schemas,api/routes,services}/", "checked": true},
+    {"item": "Tests structure: tests/{conftest.py,unit/,integration/}", "checked": true},
+    {"item": "Async engine + async_sessionmaker — correct SQLAlchemy 2.0 pattern", "checked": true},
+    {"item": "DeclarativeBase used (not legacy declarative_base())", "checked": true},
+    {"item": "get_db() uses async context manager with rollback on error", "checked": true},
+    {"item": "API versioned with /api/v1 prefix", "checked": true},
+    {"item": "CI has lint and test-backend jobs with PostgreSQL 17 service", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code", "checked": true},
+    {"item": "No unnecessary abstractions", "checked": true},
+    {"item": "Only scaffold files — no premature feature code", "checked": true},
+    {"item": "Dependencies match spec exactly — no extras", "checked": true}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Missing JWT_SECRET raises ValidationError at import time", "checked": true},
+    {"item": "Settings validated by pydantic at startup", "checked": true},
+    {"item": "get_db() rolls back on exception before re-raising", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "Config validated via pydantic-settings with type enforcement", "checked": true},
+    {"item": "Session cleanup guaranteed via async context manager", "checked": true},
+    {"item": "CORS origins parsed, stripped, and empty entries filtered", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "Q7-001",
+      "severity": "minor",
+      "check_id": "Q7",
+      "description": "backend/.coverage binary file is committed to git — this is a pytest-cov build artifact that should be gitignored",
+      "location": "backend/.coverage",
+      "fix": "Add .coverage to .gitignore and remove from tracking: git rm --cached backend/.coverage"
+    },
+    {
+      "id": "D4-001",
+      "severity": "minor",
+      "check_id": "D4",
+      "description": "Root .gitignore only contains .planwerk/.secrets.toml — missing standard Python ignores (.coverage, __pycache__, *.pyc, .env) which caused the .coverage file to be committed",
+      "location": ".gitignore",
+      "fix": "Add standard Python ignores: .coverage, __pycache__/, *.pyc, .env, *.egg-info/"
+    }
+  ],
+  "suggested_improvements": [
+    "TE5: Test names use descriptive style (test_health_returns_200_ok) but not strict test_should_X_when_Y convention — consider standardizing in future phases",
+    "TE2: Additional edge case tests could be added later: POST/PUT/DELETE to /health (405 Method Not Allowed), CORS_ORIGINS with trailing/leading commas",
+    "D1: conftest.py could benefit from shared fixtures (e.g., async_client fixture) as the test suite grows — currently each health test creates its own client"
+  ],
+  "next_steps": [
+    "Fix minor: add .coverage and standard Python ignores to .gitignore, remove backend/.coverage from git tracking",
+    "Merge PR — scaffold is complete, all review feedback from reviews 1-2 addressed",
+    "Begin Phase 2 (ORM models, Alembic migrations, authentication)"
+  ]
+}

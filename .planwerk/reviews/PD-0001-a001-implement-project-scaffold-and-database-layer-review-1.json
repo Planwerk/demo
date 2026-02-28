@@ -1,0 +1,129 @@
+{
+  "feature_id": "PD-0001",
+  "title": "A001: Implement project scaffold and database layer",
+  "date": "2026-02-28",
+  "verdict": "NEEDS_CHANGES",
+  "summary": "Scaffold is functionally complete — FastAPI app, config, database layer, health endpoint, tests, CI, and docs all present and working. All 11 tests pass, ruff clean, mypy strict clean. One spec deviation requires a fix: Python version is set to 3.12 in three places in pyproject.toml but the spec and README require 3.13. Extra runtime dependencies beyond the spec scope are also present.",
+  "verification": {
+    "uv_sync": "PASS — installs without errors",
+    "ruff_check": "PASS — All checks passed!",
+    "pytest": "PASS — 11 passed in 0.35s",
+    "mypy_strict": "PASS — no issues found in 9 source files"
+  },
+  "tests_checklist": [
+    {"item": "All 11 tests exist and pass (V1)", "checked": true},
+    {"item": "Config: valid env loads with correct defaults (TE1)", "checked": true},
+    {"item": "Config: missing JWT_SECRET raises ValidationError (TE3)", "checked": true},
+    {"item": "Config: cors_origins_list splits correctly (TE2)", "checked": true},
+    {"item": "Config: GITHUB_TOKEN defaults to None (TE2)", "checked": true},
+    {"item": "Database: Base is DeclarativeBase (TE1)", "checked": true},
+    {"item": "Database: get_db is async generator (TE1)", "checked": true},
+    {"item": "Database: engine uses asyncpg driver (TE1)", "checked": true},
+    {"item": "Database: AsyncSessionLocal is async_sessionmaker (TE1)", "checked": true},
+    {"item": "Health: GET /api/v1/health returns 200 {status: ok} (TE1)", "checked": true},
+    {"item": "Health: no auth required (TE1)", "checked": true},
+    {"item": "Health: CORS headers present for allowed origin (TE1)", "checked": true},
+    {"item": "Tests are independent with no shared mutable state (TE4)", "checked": true},
+    {"item": "Assertions are specific with exact values (TE7)", "checked": true}
+  ],
+  "code_quality_checklist": [
+    {"item": "Functions do one thing — SRP (Q1)", "checked": true},
+    {"item": "Functions small, all under 10 lines (Q2)", "checked": true},
+    {"item": "No code duplication (Q3)", "checked": true},
+    {"item": "Clear naming throughout (Q4)", "checked": true},
+    {"item": "No excessive nesting (Q5)", "checked": true},
+    {"item": "No magic numbers — defaults documented in Settings fields (Q6)", "checked": true},
+    {"item": "No dead code (Q7)", "checked": false}
+  ],
+  "security_checklist": [
+    {"item": "No SQL injection risk — ORM only (S2)", "checked": true},
+    {"item": "No hardcoded secrets in source (S3)", "checked": true},
+    {"item": "JWT_SECRET required with no default — no weak fallback (S3)", "checked": true},
+    {"item": "CORS explicitly configured, not wildcard origins (S1)", "checked": true},
+    {"item": "No sensitive data in logs or errors (S5)", "checked": true}
+  ],
+  "architecture_checklist": [
+    {"item": "Solution is as simple as possible (KISS)", "checked": true},
+    {"item": "Directory structure matches README spec (REQ-010)", "checked": true},
+    {"item": "Async engine + async_sessionmaker — correct SQLAlchemy 2.0 pattern", "checked": true},
+    {"item": "DeclarativeBase used (not legacy declarative_base())", "checked": true},
+    {"item": "get_db() uses context manager with rollback on error", "checked": true},
+    {"item": "API versioned with /api/v1 prefix from the start", "checked": true}
+  ],
+  "dry_yagni_checklist": [
+    {"item": "No duplicated code (DRY)", "checked": true},
+    {"item": "No unnecessary abstractions (YAGNI)", "checked": true},
+    {"item": "Only scaffold files created — no premature feature code", "checked": true},
+    {"item": "No extra runtime dependencies beyond spec scope", "checked": false}
+  ],
+  "fail_fast_checklist": [
+    {"item": "Missing JWT_SECRET raises ValidationError at import time", "checked": true},
+    {"item": "Settings validated by pydantic at startup", "checked": true},
+    {"item": "get_db() rolls back on exception before re-raising", "checked": true}
+  ],
+  "defensive_checklist": [
+    {"item": "Config validated via pydantic-settings with type enforcement", "checked": true},
+    {"item": "Session cleanup guaranteed via async context manager", "checked": true},
+    {"item": "CORS origins parsed and stripped of whitespace", "checked": true}
+  ],
+  "security_findings": [],
+  "architecture_findings": [],
+  "issues_found": [
+    {
+      "id": "C1-001",
+      "check_id": "C1",
+      "severity": "critical",
+      "title": "Python version set to 3.12, spec requires 3.13",
+      "description": "pyproject.toml uses requires-python='>=3.12', [tool.ruff] target-version='py312', and [tool.mypy] python_version='3.12'. The spec (Task 1.1), REQ-001 scenario 'Python version constraint enforced', and REQ-007 scenario 'Ruff rules configured' all explicitly require 3.13. README also states 'Python 3.13+'.",
+      "location": "backend/pyproject.toml:5,32,46",
+      "fix": "Change three values: (1) line 5: requires-python = '>=3.13', (2) line 32: target-version = 'py313', (3) line 46: python_version = '3.13'"
+    },
+    {
+      "id": "Q7-001",
+      "check_id": "Q7",
+      "severity": "minor",
+      "title": "Extra runtime dependencies not specified in Task 1.1",
+      "description": "pyproject.toml [project].dependencies includes bcrypt, pyjwt, structlog, and httpx beyond what Task 1.1 specifies (fastapi, uvicorn[standard], sqlalchemy[asyncio], asyncpg, pydantic-settings, alembic, python-multipart). These are needed for future phases but are scope creep for this scaffold task. Additionally, httpx appears in both runtime and dev dependency groups.",
+      "location": "backend/pyproject.toml:14-18",
+      "fix": "Move bcrypt, pyjwt, structlog to future phase when needed. Remove httpx from [project].dependencies (keep only in [dependency-groups].dev). Or accept as intentional pre-installation for upcoming phases."
+    },
+    {
+      "id": "Q7-002",
+      "check_id": "Q7",
+      "severity": "minor",
+      "title": "Extra dev dependencies not specified in Task 1.1",
+      "description": "Dev deps include pytest-testmon and mypy beyond the spec (pytest, pytest-asyncio, pytest-cov, httpx, ruff). While mypy is useful and configured in [tool.mypy], these weren't in the task spec.",
+      "location": "backend/pyproject.toml:25-28",
+      "fix": "Acceptable — mypy is actively used and pytest-testmon aids development. No action required."
+    },
+    {
+      "id": "DA1-001",
+      "check_id": "DA1",
+      "severity": "minor",
+      "title": "Reference docs state py312, should say py313 after version fix",
+      "description": "docs/reference/backend/scaffold.md line 134 states target-version = 'py312'. After fixing pyproject.toml to py313, this doc line must also be updated to stay aligned.",
+      "location": "docs/reference/backend/scaffold.md:134",
+      "fix": "Update to target-version = 'py313' after pyproject.toml is fixed."
+    },
+    {
+      "id": "TE6-001",
+      "check_id": "TE6",
+      "severity": "minor",
+      "title": "test_health_no_auth_required is functionally identical to test_health_returns_200_ok",
+      "description": "Both tests make the same GET request without auth headers and assert the same 200 + {status: ok} response. The no-auth test documents intent but exercises no different code path since there is no auth middleware.",
+      "location": "backend/tests/unit/test_health.py:26-34",
+      "fix": "Acceptable — documents the explicit requirement (REQ-006 scenario 'Health check is unauthenticated'). Will differentiate naturally once auth middleware is added in Phase 2."
+    }
+  ],
+  "suggested_improvements": [
+    "After fixing Python version to 3.13, run `uv sync` to regenerate uv.lock",
+    "Consider adding a test for disallowed CORS origin (REQ-005 scenario 'Disallowed origin blocked') — e.g., assert no access-control-allow-origin for http://evil.com",
+    "The os.environ.setdefault pattern at the top of each test file is fragile — consider a conftest.py autouse fixture or pytest env plugin for centralized env var setup in future phases"
+  ],
+  "next_steps": [
+    "Fix Python version: change 3.12 to 3.13 in three places in pyproject.toml (requires-python, ruff target-version, mypy python_version)",
+    "Update docs/reference/backend/scaffold.md line 134 to match (py313)",
+    "Re-run uv sync, ruff check, pytest, mypy to confirm no regressions",
+    "Re-request review"
+  ]
+}

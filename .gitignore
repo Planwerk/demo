@@ -1,1 +1,8 @@
 .planwerk/.secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.coverage
+.env
