@@ -2,8 +2,8 @@
   "feature_id": "PD-0002",
   "title": "A002: Implement ORM models and database migration",
   "slug": "a002-implement-orm-models-and-database-migration",
-  "status": "prepared",
-  "phase": null,
+  "status": "completed",
+  "phase": "awaiting_external_review",
   "summary": "",
   "description": "User and StatusUpdate models with all fields per data model, relationships. Alembic async config, initial migration.",
   "stories": [
@@ -327,6 +327,7 @@
       "description": "Create backend/app/models/user.py with class User(Base): __tablename__ = 'users'. Columns: id (Mapped[uuid.UUID], mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)), username (Mapped[str], mapped_column(sa.String(50), unique=True, nullable=False)), display_name (Mapped[str], mapped_column(sa.String(100), nullable=False)), email (Mapped[str], mapped_column(sa.String(255), unique=True, nullable=False)), password_hash (Mapped[str], mapped_column(sa.String(255), nullable=False)), avatar_url (Mapped[str | None], mapped_column(sa.String(500), nullable=True)), xp (Mapped[int], mapped_column(sa.Integer, default=0, server_default='0')), current_streak (Mapped[int], mapped_column(sa.Integer, default=0, server_default='0')), longest_streak (Mapped[int], mapped_column(sa.Integer, default=0, server_default='0')), last_post_date (Mapped[datetime.date | None], mapped_column(sa.Date, nullable=True)), created_at (Mapped[datetime.datetime], mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())). Add relationship: status_updates: Mapped[list['StatusUpdate']] = relationship(back_populates='user', lazy='selectin'). Import Base from app.database.",
       "level": 1,
       "estimate_minutes": 20,
+      "status": "done",
       "requirements": [
         "REQ-001",
         "REQ-003",
@@ -339,6 +340,7 @@
       "description": "Create backend/app/models/status.py with class StatusUpdate(Base): __tablename__ = 'status_updates'. Columns: id (Mapped[uuid.UUID], mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)), user_id (Mapped[uuid.UUID], mapped_column(sa.Uuid, sa.ForeignKey('users.id'), nullable=False)), message (Mapped[str], mapped_column(sa.Text, nullable=False)), category (Mapped[str], mapped_column(sa.String(20), nullable=False)), created_at (Mapped[datetime.datetime], mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now())). Add relationship: user: Mapped['User'] = relationship(back_populates='status_updates', lazy='selectin'). Import Base from app.database.",
       "level": 1,
       "estimate_minutes": 15,
+      "status": "done",
       "requirements": [
         "REQ-002",
         "REQ-004",
@@ -351,6 +353,7 @@
       "description": "Edit backend/app/models/__init__.py to import User from app.models.user and StatusUpdate from app.models.status. Define __all__ = ['User', 'StatusUpdate']. This ensures both models are registered with Base.metadata when the package is imported.",
       "level": 1,
       "estimate_minutes": 5,
+      "status": "done",
       "requirements": [
         "REQ-007"
       ]
@@ -361,6 +364,7 @@
       "description": "Create backend/tests/unit/test_models.py. Use SQLAlchemy introspection (inspect(User) or User.__table__.columns) to verify: (1) User has exactly 11 columns matching spec (id, username, display_name, email, password_hash, avatar_url, xp, current_streak, longest_streak, last_post_date, created_at). (2) Column types match spec (String lengths, Integer, Date, DateTime timezone, Uuid). (3) username and email have unique=True. (4) username, display_name, email, password_hash are not nullable. (5) avatar_url, last_post_date are nullable. (6) xp, current_streak, longest_streak have server_default='0'. (7) id is primary key with uuid4 default. (8) User.__tablename__ == 'users'. (9) User inherits from Base. Follow existing test style from test_database.py (class-per-scenario, descriptive docstrings).",
       "level": 2,
       "estimate_minutes": 25,
+      "status": "done",
       "requirements": [
         "REQ-001",
         "REQ-003",
@@ -373,6 +377,7 @@
       "description": "Add tests to backend/tests/unit/test_models.py for StatusUpdate: (1) StatusUpdate has exactly 5 columns (id, user_id, message, category, created_at). (2) Column types match spec (Uuid, Text, String(20), DateTime timezone). (3) user_id has ForeignKey to 'users.id'. (4) user_id is not nullable. (5) id is primary key with uuid4 default. (6) StatusUpdate.__tablename__ == 'status_updates'. (7) StatusUpdate inherits from Base. (8) StatusUpdate has 'user' relationship attribute. (9) User has 'status_updates' relationship attribute. (10) Both models are importable from app.models.",
       "level": 2,
       "estimate_minutes": 20,
+      "status": "done",
       "requirements": [
         "REQ-002",
         "REQ-004",
@@ -385,6 +390,7 @@
       "description": "Create backend/alembic.ini with: [alembic] script_location = alembic, sqlalchemy.url = driver://user:pass@localhost/dbname (placeholder, overridden in env.py), file_template = %%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s. Create backend/alembic/ directory with env.py that: imports asyncio, imports create_async_engine from sqlalchemy.ext.asyncio, imports settings from app.config, imports Base from app.database, imports all models via 'from app.models import User, StatusUpdate' (to register metadata), sets target_metadata = Base.metadata, defines run_migrations_offline() using settings.DATABASE_URL, defines run_migrations_online() using an async engine created from settings.DATABASE_URL with connectable.connect() in async context, calls asyncio.run() from run_migrations_online. Also create alembic/script.py.mako template (standard Alembic template).",
       "level": 3,
       "estimate_minutes": 25,
+      "status": "done",
       "requirements": [
         "REQ-005"
       ]
@@ -395,6 +401,7 @@
       "description": "Manually create backend/alembic/versions/ directory and write the initial migration file. The migration's upgrade() must: create 'users' table with all 11 columns (correct types, constraints, server defaults), then create 'status_updates' table with all 5 columns (FK to users.id, correct types). The downgrade() must: drop 'status_updates' first (FK dependency), then drop 'users'. Use op.create_table() with sa.Column definitions matching the ORM models exactly. Include unique constraints on users.username and users.email. Use sa.Uuid for UUID columns, sa.func.now() for timestamp server defaults. Revision ID should be a short hex string.",
       "level": 3,
       "estimate_minutes": 25,
+      "status": "done",
       "requirements": [
         "REQ-006"
       ]
@@ -405,6 +412,7 @@
       "description": "Add tests to backend/tests/unit/test_models.py (or create test_migrations.py): (1) alembic.ini exists and has script_location = alembic. (2) alembic/env.py exists. (3) At least one migration file exists in alembic/versions/. (4) The migration file contains op.create_table('users') and op.create_table('status_updates'). (5) The migration's downgrade drops status_updates before users. These are structural/file-based tests that verify the migration was created correctly without running against a database.",
       "level": 4,
       "estimate_minutes": 20,
+      "status": "done",
       "requirements": [
         "REQ-005",
         "REQ-006"
@@ -416,6 +424,7 @@
       "description": "Create docs/reference/backend/models.md documenting: (1) User model — full column table with field name, SQLAlchemy type, Python type, constraints, defaults, and description for each. (2) StatusUpdate model — same format. (3) Relationships section showing User 1:N StatusUpdate with back_populates. (4) Import examples: 'from app.models import User, StatusUpdate'. (5) Alembic configuration section: how env.py reads DATABASE_URL from settings, how to run migrations ('alembic upgrade head', 'alembic downgrade base'), migration file naming convention. Follow Diataxis reference style (information-oriented).",
       "level": 5,
       "estimate_minutes": 20,
+      "status": "done",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -578,8 +587,18 @@
     "prepared": {
       "github_account": "berendt",
       "timestamp": "2026-02-28T21:44:30.059307"
+    },
+    "processing": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-28T21:46:02.083962"
+    },
+    "completed": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-28T22:28:46.293065"
     }
   },
+  "github_pr": "https://github.com/Planwerk/demo/pull/13",
+  "pr_number": 13,
   "execution_history": [
     {
       "run_id": "6e245abd-39a0-49f5-ad50-a3c14c367121",
@@ -591,6 +610,62 @@
           "name": "prepare",
           "duration": 209.92970061302185,
           "type": "prepare",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "run_id": "761fe42b-839e-4caf-bdee-b2de651b6a15",
+      "timestamp": "2026-02-28T22:11:37.432721",
+      "total_duration": 1409.9463300704956,
+      "status": "completed",
+      "timings": [
+        {
+          "name": "Level 1 (3 tasks)",
+          "duration": 300.00235199928284,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 2 (2 tasks)",
+          "duration": 135.18469047546387,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 3 (2 tasks)",
+          "duration": 228.15678358078003,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 4 (1 tasks)",
+          "duration": 88.49598693847656,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "Level 5 (1 tasks)",
+          "duration": 66.04063415527344,
+          "type": "level",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0002] Code Review",
+          "duration": 225.55491948127747,
+          "type": "review",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0002] Improvements",
+          "duration": 122.48661804199219,
+          "type": "improve",
+          "status": "done"
+        },
+        {
+          "name": "[PD-0002] Simplify",
+          "duration": 244.02434539794922,
+          "type": "simplify",
           "status": "done"
         }
       ]
