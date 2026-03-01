@@ -1,0 +1,825 @@
+{
+  "feature_id": "PD-0003",
+  "title": "A003: Add Pydantic schemas and unit tests",
+  "slug": "a003-add-pydantic-schemas-and-unit-tests",
+  "status": "prepared",
+  "phase": null,
+  "summary": "",
+  "description": "**Size:** 🔨 medium\n**Category:** backend\n**Priority:** high\n\n## Summary\n\nDefine Pydantic v2 request/response schemas for user registration (`UserCreate`), status posting (`StatusCreate`), authentication (`TokenResponse`), and paginated status listing (`PaginatedStatusResponse`). Establish `tests/conftest.py` shared fixtures and `tests/unit/test_schemas.py` for schema validation. These schemas form the contract layer between API routes and the ORM models already in place (`User`, `StatusUpdate`).\n\n## Scope\n\n**Included:**\n- `app/schemas/user.py` — `UserCreate` (registration input) and `UserRead` (safe output without `password_hash`)\n- `app/schemas/status.py` — `StatusCreate` (post input), `StatusRead` (single status output with nested user), `PaginatedStatusResponse` (cursor-based paginated list wrapper)\n- `app/schemas/token.py` — `TokenResponse` (JWT access + refresh tokens)\n- `app/schemas/__init__.py` — re-exports\n- `tests/conftest.py` — extend with schema-level fixtures (valid/invalid payloads)\n- `tests/unit/test_schemas.py` — validation rules: required fields, string constraints, email format, category literal, cursor pagination bounds\n\n**Excluded (YAGNI):**\n- `UserUpdate` / `UserPatch` schemas — no profile-edit endpoint yet\n- `StatusUpdate` (edit) schema — CRUD edit not in current scope\n- `avatar_url` on `UserCreate` — avatar upload is a profile-edit concern\n- Password strength validation beyond non-empty — decided as out of scope\n- GitHub link schemas — separate feature per README\n- Gamification schemas — separate feature per README\n- WebSocket message schemas — separate concern\n\n## Visualization\n\n```mermaid\nflowchart LR\n    subgraph Schemas[\"app/schemas\"]\n        UC[\"UserCreate\"]\n        UR[\"UserRead\"]\n        SC[\"StatusCreate\"]\n        SR[\"StatusRead\"]\n        PSR[\"PaginatedStatusResponse\"]\n        TR[\"TokenResponse\"]\n    end\n\n    subgraph Models[\"app/models\"]\n        UM[\"User ORM\"]\n        SM[\"StatusUpdate ORM\"]\n    end\n\n    subgraph Tests[\"tests/unit\"]\n        TS[\"test_schemas.py\"]\n        CF[\"conftest.py fixtures\"]\n    end\n\n    UC -->|\"validates input for\"| UM\n    UR -->|\"serializes from\"| UM\n    SC -->|\"validates input for\"| SM\n    SR -->|\"serializes from\"| SM\n    PSR -->|\"wraps list of\"| SR\n    TR -->|\"returned by\"| AUTH[\"auth endpoints\"]\n\n    CF -->|\"provides payloads to\"| TS\n    TS -->|\"validates\"| Schemas\n```\n\n```mermaid\nsequenceDiagram\n    participant C as Client\n    participant API as API Route\n    participant S as Schema\n    participant M as ORM Model\n\n    C->>API: POST /auth/register\n    API->>S: validate UserCreate\n    S-->>API: validated data\n    API->>M: create User row\n    M-->>API: User instance\n    API->>S: serialize to UserRead\n    S-->>API: safe response\n    API-->>C: 201 + UserRead\n\n    C->>API: POST /status\n    API->>S: validate StatusCreate\n    S-->>API: validated data\n    API->>M: create StatusUpdate row\n    API-->>C: 201 + StatusRead\n\n    C->>API: GET /status?limit=20&after=cursor\n    API->>M: query StatusUpdate rows\n    API->>S: wrap in PaginatedStatusResponse\n    API-->>C: 200 + PaginatedStatusResponse\n```\n\n## Key Components\n\n- **`UserCreate`** (`app/schemas/user.py`): `username` (3–50 chars, alphanumeric+underscore), `display_name` (1–100 chars), `email` (valid format, max 255), `password` (non-empty string). Maps to `User` model fields. No `avatar_url` — YAGNI for registration.\n- **`UserRead`** (`app/schemas/user.py`): `id` (UUID), `username`, `display_name`, `email`, `avatar_url`, `xp`, `current_streak`, `created_at`. Excludes `password_hash`. Uses `model_config = ConfigDict(from_attributes=True)`.\n- **`StatusCreate`** (`app/schemas/status.py`): `message` (1–2000 chars, stripped), `category` (required `Literal[\"done\", \"in-progress\", \"blocked\", \"planning\"]` — matches `VALID_CATEGORIES` from ORM model).\n- **`StatusRead`** (`app/schemas/status.py`): `id`, `message`, `category`, `created_at`, `user` (nested `UserRead`). `from_attributes=True`.\n- **`PaginatedStatusResponse`** (`app/schemas/status.py`): Cursor-based — `items` (list of `StatusRead`), `next_cursor` (optional str, opaque token for next page), `has_more` (bool), `limit` (int).\n- **`TokenResponse`** (`app/schemas/token.py`): `access_token` (str), `refresh_token` (str), `token_type` (literal `\"bearer\"`).\n- **`tests/conftest.py`**: Add fixtures for valid `UserCreate`/`StatusCreate` dicts and factory helpers.\n- **`tests/unit/test_schemas.py`**: Test valid construction, field constraints (too short/long, invalid email, invalid category, empty password), and `from_attributes` round-tripping from ORM model mocks.",
+  "stories": [
+    {
+      "title": "Developer validates user registration input via UserCreate schema",
+      "role": "developer",
+      "want": "to validate user registration payloads against defined constraints before persisting",
+      "so_that": "invalid data never reaches the database and users receive clear error messages",
+      "criteria": [
+        "UserCreate rejects username shorter than 3 characters with a validation error",
+        "UserCreate rejects username longer than 50 characters with a validation error",
+        "UserCreate rejects username containing characters other than alphanumeric, underscore, or hyphen",
+        "UserCreate rejects invalid email format and accepts valid email addresses",
+        "UserCreate rejects empty password with a validation error",
+        "UserCreate rejects display_name shorter than 1 character or longer than 100 characters",
+        "UserCreate accepts a valid payload with all required fields and returns a model instance"
+      ]
+    },
+    {
+      "title": "Developer serializes User ORM model to safe response via UserRead",
+      "role": "developer",
+      "want": "to serialize a User ORM instance to a JSON-safe response that excludes sensitive fields",
+      "so_that": "password_hash is never exposed in API responses and all public fields are correctly typed",
+      "criteria": [
+        "UserRead constructed from a User ORM instance via from_attributes includes id, username, display_name, email, avatar_url, xp, current_streak, created_at",
+        "UserRead does NOT include password_hash, longest_streak, or last_post_date fields",
+        "UserRead.avatar_url is None when the ORM field is None",
+        "UserRead.xp and current_streak default to 0 when the ORM fields are 0"
+      ]
+    },
+    {
+      "title": "Developer validates status creation input via StatusCreate schema",
+      "role": "developer",
+      "want": "to validate status update payloads ensuring message content and category are within bounds",
+      "so_that": "only valid status updates are accepted by the API",
+      "criteria": [
+        "StatusCreate rejects empty message (after stripping whitespace) with a validation error",
+        "StatusCreate rejects message longer than 500 characters with a validation error",
+        "StatusCreate strips leading and trailing whitespace from message before validation",
+        "StatusCreate rejects category values not in ('done', 'in-progress', 'blocked', 'planning')",
+        "StatusCreate accepts valid message and category and returns a model instance"
+      ]
+    },
+    {
+      "title": "Developer serializes status updates with nested user info via StatusRead",
+      "role": "developer",
+      "want": "to serialize a StatusUpdate ORM instance with nested author information for API responses",
+      "so_that": "the frontend receives status data with minimal author context without leaking PII",
+      "criteria": [
+        "StatusRead includes id, message, category, created_at, and a nested user object",
+        "StatusRead.user is a UserSummary containing only username, display_name, and avatar_url",
+        "StatusRead.user does NOT contain email, password_hash, xp, or other private fields",
+        "StatusRead constructed from ORM instance via from_attributes populates all fields correctly"
+      ]
+    },
+    {
+      "title": "Developer wraps paginated status lists via PaginatedStatusResponse",
+      "role": "developer",
+      "want": "to wrap a list of status updates with pagination metadata in a standard envelope",
+      "so_that": "the frontend can render paginated feeds with correct offset-based navigation",
+      "criteria": [
+        "PaginatedStatusResponse contains items (list of StatusRead), total (int), limit (int), offset (int)",
+        "PaginatedStatusResponse accepts an empty items list with total=0",
+        "PaginatedStatusResponse.limit and offset are non-negative integers",
+        "PaginatedStatusResponse.total reflects the full count of matching records"
+      ]
+    },
+    {
+      "title": "Developer receives authentication tokens in standardized format via TokenResponse",
+      "role": "developer",
+      "want": "to return JWT access tokens in a standard OAuth2-compatible response format",
+      "so_that": "the auth endpoints return a consistent, typed token response",
+      "criteria": [
+        "TokenResponse contains access_token (str) and token_type (literal 'bearer')",
+        "TokenResponse rejects token_type values other than 'bearer'",
+        "TokenResponse requires access_token to be a non-empty string"
+      ]
+    },
+    {
+      "title": "Developer uses shared test fixtures to write schema tests efficiently",
+      "role": "developer",
+      "want": "reusable test fixtures that provide valid and invalid schema payloads",
+      "so_that": "new schema tests can be written quickly without duplicating payload construction",
+      "criteria": [
+        "conftest.py provides a valid_user_create_data fixture returning a dict with all required UserCreate fields",
+        "conftest.py provides a valid_status_create_data fixture returning a dict with all required StatusCreate fields",
+        "Fixtures return fresh dict copies on each invocation to prevent cross-test contamination",
+        "Fixtures are importable from tests/conftest.py by all test modules"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "description": "UserCreate SHALL validate username as 3–50 characters matching pattern ^[a-zA-Z0-9_-]+$",
+      "priority": "SHALL",
+      "rationale": "Prevents invalid usernames from reaching the database and matches the username column constraint (String(50), unique)",
+      "scenarios": [
+        {
+          "name": "Valid username accepted",
+          "when": "UserCreate is instantiated with username='alice_dev'",
+          "then": "validation succeeds and username is stored as-is",
+          "and_then": [
+            "model instance is returned with username='alice_dev'"
+          ]
+        },
+        {
+          "name": "Username too short rejected",
+          "when": "UserCreate is instantiated with username='ab'",
+          "then": "a ValidationError is raised indicating minimum length of 3",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Username with invalid characters rejected",
+          "when": "UserCreate is instantiated with username='alice@dev'",
+          "then": "a ValidationError is raised indicating invalid characters",
+          "and_then": [
+            "no model instance is created"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "description": "UserCreate SHALL validate email as a valid email format with maximum 255 characters",
+      "priority": "SHALL",
+      "rationale": "Ensures email addresses conform to RFC 5322 and fit within the database column constraint (String(255))",
+      "scenarios": [
+        {
+          "name": "Valid email accepted",
+          "when": "UserCreate is instantiated with email='alice@example.com'",
+          "then": "validation succeeds and email is normalized",
+          "and_then": [
+            "model instance is returned with the email value"
+          ]
+        },
+        {
+          "name": "Invalid email format rejected",
+          "when": "UserCreate is instantiated with email='not-an-email'",
+          "then": "a ValidationError is raised indicating invalid email format",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Email exceeding max length rejected",
+          "when": "UserCreate is instantiated with email longer than 255 characters",
+          "then": "a ValidationError is raised indicating maximum length exceeded",
+          "and_then": [
+            "no model instance is created"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "description": "UserCreate SHALL require a non-empty password string",
+      "priority": "SHALL",
+      "rationale": "Prevents empty password submission; password strength rules deferred to auth service (S04)",
+      "scenarios": [
+        {
+          "name": "Valid password accepted",
+          "when": "UserCreate is instantiated with password='secret123'",
+          "then": "validation succeeds",
+          "and_then": [
+            "model instance is returned with the password value"
+          ]
+        },
+        {
+          "name": "Empty password rejected",
+          "when": "UserCreate is instantiated with password=''",
+          "then": "a ValidationError is raised indicating password must not be empty",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Missing password field rejected",
+          "when": "UserCreate is instantiated without a password field",
+          "then": "a ValidationError is raised indicating password is required",
+          "and_then": [
+            "no model instance is created"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "description": "StatusCreate SHALL validate category as a Literal value matching VALID_CATEGORIES from the ORM model",
+      "priority": "SHALL",
+      "rationale": "Ensures category values are consistent between Pydantic validation and the database CHECK constraint",
+      "scenarios": [
+        {
+          "name": "Valid category accepted",
+          "when": "StatusCreate is instantiated with category='in-progress'",
+          "then": "validation succeeds and category is stored as-is",
+          "and_then": [
+            "model instance is returned with category='in-progress'"
+          ]
+        },
+        {
+          "name": "Invalid category rejected",
+          "when": "StatusCreate is instantiated with category='review'",
+          "then": "a ValidationError is raised listing allowed category values",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "All four valid categories accepted",
+          "when": "StatusCreate is instantiated with each of 'done', 'in-progress', 'blocked', 'planning'",
+          "then": "validation succeeds for all four values",
+          "and_then": [
+            "a model instance is returned for each"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "description": "StatusCreate SHALL validate message as 1–500 characters after stripping leading/trailing whitespace",
+      "priority": "SHALL",
+      "rationale": "Matches the database model constraint (TEXT with max 500 chars per README) and prevents whitespace-only submissions",
+      "scenarios": [
+        {
+          "name": "Valid message accepted",
+          "when": "StatusCreate is instantiated with message='Working on feature X'",
+          "then": "validation succeeds and message is stored stripped",
+          "and_then": [
+            "model instance is returned with trimmed message"
+          ]
+        },
+        {
+          "name": "Whitespace-only message rejected",
+          "when": "StatusCreate is instantiated with message='   '",
+          "then": "a ValidationError is raised indicating message must not be empty after stripping",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Message exceeding 500 characters rejected",
+          "when": "StatusCreate is instantiated with a 501-character message",
+          "then": "a ValidationError is raised indicating maximum length of 500",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Message with leading/trailing whitespace is stripped",
+          "when": "StatusCreate is instantiated with message='  hello world  '",
+          "then": "validation succeeds and message is stored as 'hello world'",
+          "and_then": [
+            "model instance.message equals 'hello world'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "description": "UserRead and StatusRead SHALL serialize from ORM model instances via model_config ConfigDict(from_attributes=True)",
+      "priority": "SHALL",
+      "rationale": "Enables direct conversion from SQLAlchemy ORM objects to Pydantic response models without manual field mapping",
+      "scenarios": [
+        {
+          "name": "UserRead from ORM object",
+          "when": "UserRead.model_validate(user_orm_instance) is called with a User ORM object",
+          "then": "all public fields (id, username, display_name, email, avatar_url, xp, current_streak, created_at) are populated",
+          "and_then": [
+            "password_hash is NOT present in the serialized output"
+          ]
+        },
+        {
+          "name": "StatusRead from ORM object with nested user",
+          "when": "StatusRead.model_validate(status_orm_instance) is called with a StatusUpdate that has a loaded user relationship",
+          "then": "the user field is populated as a UserSummary with username, display_name, avatar_url",
+          "and_then": [
+            "email and password_hash are NOT present in the nested user"
+          ]
+        },
+        {
+          "name": "UserSummary from ORM object",
+          "when": "UserSummary.model_validate(user_orm_instance) is called",
+          "then": "only username, display_name, and avatar_url are populated",
+          "and_then": [
+            "id, email, xp, current_streak, password_hash are NOT present"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-007",
+      "description": "PaginatedStatusResponse SHALL contain items (list of StatusRead), total (int), limit (int), and offset (int)",
+      "priority": "SHALL",
+      "rationale": "Provides a standard offset-based pagination envelope matching the README API contract for GET /statuses",
+      "scenarios": [
+        {
+          "name": "Paginated response with items",
+          "when": "PaginatedStatusResponse is instantiated with items=[status_read], total=1, limit=50, offset=0",
+          "then": "all fields are populated correctly",
+          "and_then": [
+            "items contains the StatusRead instance"
+          ]
+        },
+        {
+          "name": "Empty paginated response",
+          "when": "PaginatedStatusResponse is instantiated with items=[], total=0, limit=50, offset=0",
+          "then": "items is an empty list and total is 0",
+          "and_then": [
+            "limit and offset retain their values"
+          ]
+        },
+        {
+          "name": "Negative offset rejected",
+          "when": "PaginatedStatusResponse is instantiated with offset=-1",
+          "then": "a ValidationError is raised indicating offset must be non-negative",
+          "and_then": [
+            "no model instance is created"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-008",
+      "description": "TokenResponse SHALL contain access_token (str) and token_type (literal 'bearer')",
+      "priority": "SHALL",
+      "rationale": "Provides a standard OAuth2-compatible token response format; refresh token is delivered via httpOnly cookie per README design",
+      "scenarios": [
+        {
+          "name": "Valid token response",
+          "when": "TokenResponse is instantiated with access_token='eyJ...' and token_type='bearer'",
+          "then": "all fields are populated correctly",
+          "and_then": [
+            "model instance is returned"
+          ]
+        },
+        {
+          "name": "Invalid token_type rejected",
+          "when": "TokenResponse is instantiated with token_type='mac'",
+          "then": "a ValidationError is raised indicating token_type must be 'bearer'",
+          "and_then": [
+            "no model instance is created"
+          ]
+        },
+        {
+          "name": "Empty access_token rejected",
+          "when": "TokenResponse is instantiated with access_token=''",
+          "then": "a ValidationError is raised indicating access_token must not be empty",
+          "and_then": [
+            "no model instance is created"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-009",
+      "description": "UserRead SHALL exclude password_hash and other sensitive internal fields from serialized output",
+      "priority": "SHALL",
+      "rationale": "Prevents password hash leakage in API responses; sensitive fields must never appear in response schemas",
+      "scenarios": [
+        {
+          "name": "password_hash not in UserRead fields",
+          "when": "UserRead schema is inspected for its field names",
+          "then": "password_hash is NOT among the defined fields",
+          "and_then": [
+            "longest_streak and last_post_date are also NOT among the defined fields"
+          ]
+        },
+        {
+          "name": "Serialized UserRead does not contain password_hash",
+          "when": "UserRead is constructed from an ORM object that has password_hash='$2b$...'",
+          "then": "the .model_dump() output does not contain a 'password_hash' key",
+          "and_then": [
+            "the JSON output does not contain the hash value"
+          ]
+        },
+        {
+          "name": "UserSummary excludes all sensitive and unnecessary fields",
+          "when": "UserSummary is constructed from an ORM object",
+          "then": ".model_dump() contains only username, display_name, avatar_url",
+          "and_then": [
+            "no other fields are present"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "REQ-010",
+      "description": "app.schemas.__init__ SHALL re-export all public schema classes",
+      "priority": "SHALL",
+      "rationale": "Enables convenient imports like 'from app.schemas import UserCreate' and prevents import fragmentation",
+      "scenarios": [
+        {
+          "name": "All schemas importable from package root",
+          "when": "'from app.schemas import UserCreate, UserRead, UserSummary, StatusCreate, StatusRead, PaginatedStatusResponse, TokenResponse' is executed",
+          "then": "all seven classes are successfully imported",
+          "and_then": [
+            "each class is the same object as its source module class"
+          ]
+        },
+        {
+          "name": "__all__ is defined",
+          "when": "app.schemas.__all__ is inspected",
+          "then": "it contains all seven schema class names",
+          "and_then": [
+            "no internal or private names are included"
+          ]
+        },
+        {
+          "name": "Star import provides all schemas",
+          "when": "'from app.schemas import *' is used",
+          "then": "all seven schema classes are available in the importing namespace",
+          "and_then": []
+        }
+      ]
+    },
+    {
+      "id": "REQ-011",
+      "description": "tests/conftest.py SHALL provide reusable valid payload fixtures for UserCreate and StatusCreate",
+      "priority": "SHALL",
+      "rationale": "Shared fixtures eliminate payload duplication across test files and ensure consistent test data",
+      "scenarios": [
+        {
+          "name": "valid_user_create_data fixture returns valid dict",
+          "when": "the valid_user_create_data fixture is invoked",
+          "then": "it returns a dict that passes UserCreate validation without errors",
+          "and_then": [
+            "the dict contains username, display_name, email, and password keys"
+          ]
+        },
+        {
+          "name": "valid_status_create_data fixture returns valid dict",
+          "when": "the valid_status_create_data fixture is invoked",
+          "then": "it returns a dict that passes StatusCreate validation without errors",
+          "and_then": [
+            "the dict contains message and category keys"
+          ]
+        },
+        {
+          "name": "Fixtures return independent copies",
+          "when": "the fixture is invoked twice and one copy is mutated",
+          "then": "the other copy is unaffected",
+          "and_then": [
+            "each invocation returns a fresh dict"
+          ]
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "Create app/schemas/user.py with UserCreate, UserRead, and UserSummary schemas (REQ-001, REQ-002, REQ-003, REQ-006, REQ-009)",
+      "level": 1,
+      "estimate_minutes": 20,
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-006",
+        "REQ-009"
+      ]
+    },
+    {
+      "id": "1.2",
+      "title": "Create app/schemas/status.py with StatusCreate, StatusRead, and PaginatedStatusResponse schemas (REQ-004, REQ-005, REQ-006, REQ-007)",
+      "level": 1,
+      "estimate_minutes": 20,
+      "requirements": [
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007"
+      ]
+    },
+    {
+      "id": "1.3",
+      "title": "Create app/schemas/token.py with TokenResponse and update app/schemas/__init__.py with all re-exports (REQ-008, REQ-010)",
+      "level": 1,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-008",
+        "REQ-010"
+      ]
+    },
+    {
+      "id": "1.4",
+      "title": "Extend tests/conftest.py with schema-level payload fixtures (REQ-011)",
+      "level": 1,
+      "estimate_minutes": 10,
+      "requirements": [
+        "REQ-011"
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "Write unit tests for UserCreate validation rules in tests/unit/test_schemas.py (REQ-001, REQ-002, REQ-003)",
+      "level": 2,
+      "estimate_minutes": 20,
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003"
+      ]
+    },
+    {
+      "id": "2.2",
+      "title": "Write unit tests for UserRead and UserSummary serialization in tests/unit/test_schemas.py (REQ-006, REQ-009)",
+      "level": 2,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-006",
+        "REQ-009"
+      ]
+    },
+    {
+      "id": "2.3",
+      "title": "Write unit tests for StatusCreate validation in tests/unit/test_schemas.py (REQ-004, REQ-005)",
+      "level": 2,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-004",
+        "REQ-005"
+      ]
+    },
+    {
+      "id": "2.4",
+      "title": "Write unit tests for StatusRead, PaginatedStatusResponse, and TokenResponse in tests/unit/test_schemas.py (REQ-006, REQ-007, REQ-008)",
+      "level": 2,
+      "estimate_minutes": 20,
+      "requirements": [
+        "REQ-006",
+        "REQ-007",
+        "REQ-008"
+      ]
+    },
+    {
+      "id": "2.5",
+      "title": "Write edge case and boundary tests for all schemas in tests/unit/test_schemas.py (REQ-001, REQ-004, REQ-005)",
+      "level": 2,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-001",
+        "REQ-004",
+        "REQ-005"
+      ]
+    },
+    {
+      "id": "2.6",
+      "title": "Write tests for schema package exports and category sync in tests/unit/test_schemas.py (REQ-010)",
+      "level": 2,
+      "estimate_minutes": 10,
+      "requirements": [
+        "REQ-010"
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Write reference documentation for all Pydantic schemas at docs/reference/backend/schemas.md",
+      "level": 3,
+      "estimate_minutes": 15,
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ]
+    }
+  ],
+  "test_specifications": [
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_valid_user_create_accepted",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "UserCreate instantiates successfully with all valid fields from fixture",
+      "requirement_id": "REQ-001"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_username_too_short_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised for username with 2 characters",
+      "requirement_id": "REQ-001"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_username_invalid_chars_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised for username containing '@' or spaces",
+      "requirement_id": "REQ-001"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_email_invalid_format_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised for email='not-an-email'",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_email_too_long_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised for email longer than 255 characters",
+      "requirement_id": "REQ-002"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_password_empty_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised for password=''",
+      "requirement_id": "REQ-003"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_missing_required_fields_rejected",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "ValidationError raised when each required field is omitted individually",
+      "requirement_id": "REQ-003"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_all_valid_categories_accepted",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "StatusCreate succeeds for all four valid category values (parametrized)",
+      "requirement_id": "REQ-004"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_invalid_category_rejected",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "ValidationError raised for category='review'",
+      "requirement_id": "REQ-004"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_message_whitespace_only_rejected",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "ValidationError raised for message='   ' (whitespace-only after stripping)",
+      "requirement_id": "REQ-005"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_message_too_long_rejected",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "ValidationError raised for message with 501 characters",
+      "requirement_id": "REQ-005"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_message_stripped_of_whitespace",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "StatusCreate('  hello  ').message equals 'hello'",
+      "requirement_id": "REQ-005"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_user_read_from_orm_populates_all_fields",
+      "story": "Developer serializes User ORM model to safe response via UserRead",
+      "expected": "UserRead.model_validate(mock_user) contains id, username, display_name, email, avatar_url, xp, current_streak, created_at",
+      "requirement_id": "REQ-006"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_user_read_excludes_password_hash",
+      "story": "Developer serializes User ORM model to safe response via UserRead",
+      "expected": "'password_hash' not in UserRead.model_validate(mock_user).model_dump()",
+      "requirement_id": "REQ-009"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_user_summary_from_orm_populates_minimal_fields",
+      "story": "Developer serializes status updates with nested user info via StatusRead",
+      "expected": "UserSummary.model_validate(mock_user) contains only username, display_name, avatar_url",
+      "requirement_id": "REQ-006"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_user_summary_excludes_email",
+      "story": "Developer serializes status updates with nested user info via StatusRead",
+      "expected": "'email' not in UserSummary.model_validate(mock_user).model_dump()",
+      "requirement_id": "REQ-009"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_status_read_from_orm_populates_all_fields",
+      "story": "Developer serializes status updates with nested user info via StatusRead",
+      "expected": "StatusRead.model_validate(mock_status) contains id, message, category, created_at, user (UserSummary)",
+      "requirement_id": "REQ-006"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_status_read_nested_user_excludes_email",
+      "story": "Developer serializes status updates with nested user info via StatusRead",
+      "expected": "StatusRead.model_validate(mock_status).user does not have an 'email' attribute in serialized form",
+      "requirement_id": "REQ-009"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_paginated_response_with_items",
+      "story": "Developer wraps paginated status lists via PaginatedStatusResponse",
+      "expected": "PaginatedStatusResponse constructed with items, total, limit, offset succeeds",
+      "requirement_id": "REQ-007"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_paginated_response_negative_offset_rejected",
+      "story": "Developer wraps paginated status lists via PaginatedStatusResponse",
+      "expected": "ValidationError raised for offset=-1",
+      "requirement_id": "REQ-007"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_valid_token_response",
+      "story": "Developer receives authentication tokens in standardized format via TokenResponse",
+      "expected": "TokenResponse(access_token='eyJ...', token_type='bearer') succeeds",
+      "requirement_id": "REQ-008"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_token_type_must_be_bearer",
+      "story": "Developer receives authentication tokens in standardized format via TokenResponse",
+      "expected": "ValidationError raised for token_type='mac'",
+      "requirement_id": "REQ-008"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_all_schemas_importable_from_package",
+      "story": "Developer uses shared test fixtures to write schema tests efficiently",
+      "expected": "All 7 schema classes import from app.schemas without error",
+      "requirement_id": "REQ-010"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_schemas_all_defined",
+      "story": "Developer uses shared test fixtures to write schema tests efficiently",
+      "expected": "app.schemas.__all__ contains all 7 schema class names",
+      "requirement_id": "REQ-010"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_schema_categories_match_orm_valid_categories",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "The set of accepted Literal values in StatusCreate.category matches VALID_CATEGORIES from app.models.status",
+      "requirement_id": "REQ-004"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_username_exactly_3_chars_accepted",
+      "story": "Developer validates user registration input via UserCreate schema",
+      "expected": "UserCreate with username='abc' succeeds (boundary test)",
+      "requirement_id": "REQ-001"
+    },
+    {
+      "test_file": "tests/unit/test_schemas.py",
+      "test_function": "test_message_with_unicode_accepted",
+      "story": "Developer validates status creation input via StatusCreate schema",
+      "expected": "StatusCreate with unicode/emoji message succeeds",
+      "requirement_id": "REQ-005"
+    }
+  ],
+  "affected_files": [],
+  "similar_patterns": [],
+  "review_criteria": [
+    "All 11 SHALL requirements have corresponding passing tests in tests/unit/test_schemas.py",
+    "UserRead and UserSummary exclude password_hash — verified by explicit test assertions",
+    "UserSummary contains exactly username, display_name, avatar_url — no email leakage in StatusRead nesting",
+    "StatusCreate category Literal values match VALID_CATEGORIES from app.models.status — verified by sync test",
+    "StatusCreate strips whitespace from message before length validation — uses BeforeValidator or equivalent",
+    "All 7 schema classes are re-exported from app.schemas.__init__ with __all__ defined",
+    "Test file follows existing project conventions: class-based organization, docstrings on classes, typed method signatures, no bare asserts without descriptive context",
+    "email-validator added to pyproject.toml dependencies for EmailStr support",
+    "Reference documentation at docs/reference/backend/schemas.md covers all schemas with field tables matching existing docs format",
+    "No unused imports, no type errors — passes ruff check and mypy strict"
+  ],
+  "implementation_notes": "ARCHITECTURAL DECISIONS:\n\n1. UserSummary schema: Added beyond original feature elaboration based on README API contract (nested user in status responses shows only username, display_name, avatar_url) and devil's advocate HIGH risk flag about email leakage. StatusRead nests UserSummary instead of UserRead.\n\n2. Offset-based pagination: PaginatedStatusResponse uses offset-based (items, total, limit, offset) matching README API contract and PLAN.md S07 definition, not cursor-based as stated in feature elaboration. The README GET /statuses response and S07 query params (limit, offset) are consistent with offset-based.\n\n3. TokenResponse without refresh_token: Per README, refresh token is delivered via httpOnly cookie, not in JSON body. TokenResponse contains only access_token and token_type, matching the OAuth2-standard minimum. The auth feature (S04/S05) will handle cookie-based refresh.\n\n4. Message max length 500: README Data Model and Validation Rules tables both specify max 500 chars for status message. Feature elaboration said 2000 which appears to be an error.\n\n5. Password validation — non-empty only: Feature elaboration explicitly scopes out password strength validation beyond non-empty. README says min 8 chars but the auth feature (S04) should enforce this at the service layer, not the schema.\n\n6. Category source of truth: VALID_CATEGORIES is defined in app.models.status. The schema uses Literal['done', 'in-progress', 'blocked', 'planning']. A dedicated sync test (TestCategorySync) ensures these stay aligned. A shared StrEnum could be introduced later but is YAGNI for this task.\n\n7. email-validator dependency: Must be added to pyproject.toml for Pydantic's EmailStr to work. Currently only pydantic-settings is listed; pydantic itself is transitive.\n\n8. Whitespace stripping on StatusCreate.message: Use Annotated[str, BeforeValidator(str.strip)] so stripping occurs BEFORE Field(min_length=1, max_length=500) validation. This ensures whitespace-only messages are rejected (they strip to empty, failing min_length=1).\n\nKEY FILES TO REFERENCE:\n- backend/app/models/user.py — User ORM fields to map in UserRead\n- backend/app/models/status.py — StatusUpdate ORM fields, VALID_CATEGORIES tuple\n- backend/app/config.py — Pydantic v2 usage patterns (field_validator, ConfigDict)\n- backend/tests/unit/test_models.py — Test organization pattern to follow\n- backend/tests/conftest.py — Existing fixtures to extend\n\nPOTENTIAL PITFALLS:\n- EmailStr requires email-validator package — add to dependencies\n- BeforeValidator ordering: ensure strip runs before min_length check\n- from_attributes requires ConfigDict import from pydantic, not pydantic-settings\n- StatusRead.user field requires the User relationship to be loaded on the ORM object (lazy='raise' on model); callers must eager-load\n- Literal type args extraction for sync test: use typing.get_args() on the field annotation",
+  "status_history": {
+    "draft": {
+      "github_account": "berendt",
+      "timestamp": "2026-02-24T19:10:35.695436"
+    },
+    "elaborated": {
+      "github_account": "berendt",
+      "timestamp": "2026-03-01T09:20:20.370852"
+    },
+    "preparing": {
+      "github_account": "berendt",
+      "timestamp": "2026-03-01T09:24:06.780540"
+    },
+    "prepared": {
+      "github_account": "berendt",
+      "timestamp": "2026-03-01T09:31:51.006869"
+    }
+  },
+  "execution_history": [
+    {
+      "run_id": "95cdeeb8-32d2-4f0b-a471-22472849216f",
+      "timestamp": "2026-03-01T09:31:51.006909",
+      "total_duration": 461.79271960258484,
+      "status": "completed",
+      "timings": [
+        {
+          "name": "prepare",
+          "duration": 461.79271960258484,
+          "type": "prepare",
+          "status": "done"
+        }
+      ]
+    }
+  ]
+}
